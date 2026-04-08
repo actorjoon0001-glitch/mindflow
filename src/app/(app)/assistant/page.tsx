@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import {
-  Send, Bot, User, Trash2, Sparkles, Loader2,
+  Send, Bot, User, Trash2, Sparkles, Loader2, Mic, MicOff,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -12,15 +12,56 @@ import { cn } from '@/lib/utils';
 export default function AssistantPage() {
   const { messages, loading, initialLoading, sendMessage, clearChat } = useChat();
   const [input, setInput] = useState('');
+  const [isListening, setIsListening] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<any>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('이 브라우저는 음성 인식을 지원하지 않습니다. Chrome을 사용해주세요.');
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'ko-KR';
+    recognition.continuous = false;
+    recognition.interimResults = true;
+
+    recognition.onstart = () => setIsListening(true);
+
+    recognition.onresult = (event: any) => {
+      let transcript = '';
+      for (let i = 0; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+      setInput(transcript);
+    };
+
+    recognition.onerror = () => setIsListening(false);
+    recognition.onend = () => setIsListening(false);
+
+    recognitionRef.current = recognition;
+    recognition.start();
+  };
+
   const handleSend = async () => {
     if (!input.trim() || loading) return;
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+    }
     const msg = input;
     setInput('');
     await sendMessage(msg);
@@ -146,17 +187,32 @@ export default function AssistantPage() {
 
       {/* Input */}
       <div className="border-t border-surface-300 pt-4">
+        {isListening && (
+          <div className="flex items-center gap-2 mb-2 px-1">
+            <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+            <span className="text-xs text-red-400">듣고 있어요... 말씀해주세요</span>
+          </div>
+        )}
         <div className="flex gap-2 items-end">
           <textarea
             ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="메시지를 입력하세요... (Shift+Enter로 줄바꿈)"
+            placeholder="메시지를 입력하거나 🎤 마이크를 눌러 말하세요"
             rows={1}
             className="flex-1 bg-surface-100 border border-surface-300 rounded-xl px-4 py-3 text-sm text-gray-200 placeholder:text-gray-600 resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 max-h-32"
             style={{ minHeight: '44px' }}
           />
+          <Button
+            onClick={toggleListening}
+            variant={isListening ? 'danger' : 'secondary'}
+            size="icon"
+            className="h-11 w-11 rounded-xl shrink-0"
+            title={isListening ? '음성 인식 중지' : '음성으로 입력'}
+          >
+            {isListening ? <MicOff size={18} /> : <Mic size={18} />}
+          </Button>
           <Button
             onClick={handleSend}
             disabled={!input.trim() || loading}
