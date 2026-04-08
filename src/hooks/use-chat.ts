@@ -51,14 +51,20 @@ export function useChat() {
     });
     const response = await res.json();
 
+    // Build assistant message with executed action info
+    let assistantContent = response.content || '';
+    if (response.executedActions?.length) {
+      assistantContent += '\n\n✅ ' + response.executedActions.join('\n✅ ');
+    }
+
     // Save assistant message
     const { data: assistantMsg } = await supabase
       .from('chat_messages')
       .insert({
         user_id: user.id,
         role: 'assistant' as const,
-        content: response.content,
-        metadata: { actions: response.actions },
+        content: assistantContent,
+        metadata: { actions: response.actions, executedActions: response.executedActions },
       })
       .select()
       .single();

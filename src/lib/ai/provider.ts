@@ -81,16 +81,45 @@ ${content}`;
   }
 
   async chat(request: ChatRequest): Promise<ChatResponse> {
-    const systemPrompt = `당신은 MindFlow AI 비서입니다. 사용자의 메모, 할 일, 일정 관리를 도와주는 친근하고 유능한 비서입니다.
+    const today = new Date();
+    const todayStr = today.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+    const tomorrowDate = new Date(today);
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    const tomorrowISO = tomorrowDate.toISOString().split('T')[0];
+    const todayISO = today.toISOString().split('T')[0];
 
-역할:
-- 사용자의 질문에 친절하게 답변
-- 할 일 정리, 일정 관리, 메모 작성을 도와줌
-- 한국어로 대화
-- 답변은 간결하고 실용적으로
-- 이모지를 적절히 사용해서 친근하게
+    const systemPrompt = `당신은 MindFlow AI 비서입니다. 사용자의 메모, 할 일, 일정을 실제로 생성할 수 있습니다.
 
-오늘 날짜: ${new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}`;
+오늘 날짜: ${todayStr} (${todayISO})
+내일 날짜: ${tomorrowISO}
+
+## 응답 규칙
+반드시 아래 JSON 형식으로만 응답하세요 (다른 텍스트 없이):
+{
+  "content": "사용자에게 보여줄 친근한 한국어 응답 메시지",
+  "actions": []
+}
+
+## 액션 타입
+사용자가 메모/할일/일정을 만들어달라고 하면 actions 배열에 추가하세요:
+
+메모 생성:
+{"type": "create_note", "data": {"title": "제목", "content": "내용"}}
+
+할 일 생성:
+{"type": "create_task", "data": {"title": "제목", "priority": "low|medium|high|urgent", "due_date": "YYYY-MM-DD 또는 null"}}
+
+일정 생성:
+{"type": "create_event", "data": {"title": "제목", "start_time": "YYYY-MM-DDTHH:mm:ss", "end_time": "YYYY-MM-DDTHH:mm:ss", "location": "장소 또는 null"}}
+
+## 중요
+- 사용자가 뭔가를 기록/저장/추가/생성/등록해달라고 하면 반드시 적절한 action을 포함하세요
+- "내일 1시" = "${tomorrowISO}T13:00:00", 종료는 1시간 후로
+- "오늘 3시" = "${todayISO}T15:00:00"
+- 일정 생성 시 메모도 함께 만들어달라고 하면 create_note + create_event 둘 다 추가
+- 일반 대화(질문, 인사 등)에는 actions를 빈 배열로
+- content에는 이모지를 적절히 사용해서 친근하게 답변
+- content에는 실제로 생성한 항목을 확인해주는 내용 포함`;
 
     const messages: { role: string; content: string }[] = [
       { role: 'system', content: systemPrompt },
@@ -116,7 +145,17 @@ ${content}`;
 
     try {
       const response = await callOpenAI(messages, 0.7);
-      return { content: response, actions: [] };
+      const cleaned = response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+      try {
+        const parsed = JSON.parse(cleaned);
+        return {
+          content: parsed.content || response,
+          actions: parsed.actions || [],
+        };
+      } catch {
+        return { content: response, actions: [] };
+      }
     } catch (error) {
       console.error('AI chat error:', error);
       return { content: '죄송합니다. AI 응답에 실패했습니다. 잠시 후 다시 시도해주세요.', actions: [] };
