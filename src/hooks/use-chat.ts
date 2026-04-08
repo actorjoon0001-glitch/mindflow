@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuthStore } from '@/stores/auth-store';
-import { aiProvider } from '@/lib/ai/provider';
 import type { ChatMessage } from '@/types';
 
 export function useChat() {
@@ -44,8 +43,13 @@ export function useChat() {
 
     if (userMsg) setMessages((prev) => [...prev, userMsg]);
 
-    // Get AI response
-    const response = await aiProvider.chat({ message: content });
+    // Get AI response via server API
+    const res = await fetch('/api/ai/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: content }),
+    });
+    const response = await res.json();
 
     // Save assistant message
     const { data: assistantMsg } = await supabase

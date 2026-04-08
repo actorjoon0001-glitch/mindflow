@@ -13,7 +13,6 @@ import { Card, CardTitle } from '@/components/ui/card';
 import { useNote } from '@/hooks/use-notes';
 import { useTasks } from '@/hooks/use-tasks';
 import { useEvents } from '@/hooks/use-events';
-import { aiProvider } from '@/lib/ai/provider';
 import { formatDate } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import type { AISummaryResult } from '@/types';
@@ -74,7 +73,12 @@ export default function NoteDetailPage() {
   const handleAISummarize = async () => {
     if (!content.trim()) return;
     setAiLoading(true);
-    const result = await aiProvider.summarizeNote(content);
+    const res = await fetch('/api/ai/summarize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content }),
+    });
+    const result = await res.json();
     setAiResult(result);
 
     // Save summary and tags to note
