@@ -5,6 +5,7 @@ import { AuthProvider } from '@/providers/auth-provider';
 import { AppSidebar } from '@/components/layout/app-sidebar';
 import { Header } from '@/components/layout/header';
 import { MobileNav } from '@/components/layout/mobile-nav';
+import { NotificationBanner } from '@/components/notifications/notification-banner';
 import { cn } from '@/lib/utils';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -41,6 +42,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           sidebarCollapsed ? 'lg:pl-[68px]' : 'lg:pl-[240px]'
         )}>
           <Header onMenuToggle={() => setMobileMenuOpen(true)} />
+          <NotificationBanner />
           <main className="p-4 lg:p-6 pb-24 lg:pb-6 min-h-[calc(100vh-4rem)]">
             {children}
           </main>
