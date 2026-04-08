@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { Menu, Search, Bell, BellOff } from 'lucide-react';
+import { Menu, Search, Bell, BellOff, PanelRightOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNotifications } from '@/hooks/use-notifications';
 
@@ -42,6 +42,15 @@ export function Header({ onMenuToggle }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-gray-400"
+          title="미니 창 열기"
+          onClick={() => window.open('/mini', 'mindflow-mini', 'width=360,height=520,top=100,right=100,resizable=yes')}
+        >
+          <PanelRightOpen size={18} />
+        </Button>
         <Button variant="ghost" size="icon" className="text-gray-400">
           <Search size={18} />
         </Button>
