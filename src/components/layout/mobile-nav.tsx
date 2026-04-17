@@ -2,14 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, FileText, CheckSquare, Calendar, Bot } from 'lucide-react';
+import { LayoutDashboard, FileText, CheckSquare, Clock, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const items = [
   { label: '대시보드', href: '/dashboard', Icon: LayoutDashboard },
   { label: '메모', href: '/notes', Icon: FileText },
+  { label: '근태', href: '/attendance', Icon: Clock },
   { label: '할 일', href: '/tasks', Icon: CheckSquare },
-  { label: '캘린더', href: '/calendar', Icon: Calendar },
   { label: 'AI 비서', href: '/assistant', Icon: Bot },
 ];
 
