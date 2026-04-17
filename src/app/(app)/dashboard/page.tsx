@@ -13,6 +13,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { createClient } from '@/lib/supabase/client';
 import { formatRelativeTime, truncate } from '@/lib/utils';
 import { TASK_PRIORITY_COLORS } from '@/lib/constants';
+import { AttendanceDashboardWidget } from '@/components/attendance/dashboard-widget';
 import type { Note, Task, CalendarEvent } from '@/types';
 
 export default function DashboardPage() {
@@ -167,6 +168,9 @@ export default function DashboardPage() {
 
         {/* Sidebar column */}
         <div className="space-y-4">
+          {/* Today attendance */}
+          <AttendanceDashboardWidget />
+
           {/* Upcoming tasks */}
           <Card>
             <CardHeader>

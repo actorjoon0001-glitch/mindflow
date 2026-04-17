@@ -4,14 +4,14 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, FileText, CheckSquare, Calendar,
-  Bot, Settings, LogOut, Brain, ChevronLeft,
+  Bot, Settings, LogOut, Brain, ChevronLeft, Clock,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar } from '@/components/ui/avatar';
 import { useAuthStore } from '@/stores/auth-store';
 
 const icons: Record<string, typeof LayoutDashboard> = {
-  LayoutDashboard, FileText, CheckSquare, Calendar, Bot, Settings,
+  LayoutDashboard, FileText, CheckSquare, Calendar, Bot, Settings, Clock,
 };
 
 const navItems = [
@@ -19,6 +19,7 @@ const navItems = [
   { label: '메모', href: '/notes', icon: 'FileText' },
   { label: '할 일', href: '/tasks', icon: 'CheckSquare' },
   { label: '캘린더', href: '/calendar', icon: 'Calendar' },
+  { label: '근태관리', href: '/attendance', icon: 'Clock' },
   { label: 'AI 비서', href: '/assistant', icon: 'Bot' },
 ];
 
