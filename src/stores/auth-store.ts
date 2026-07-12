@@ -13,11 +13,12 @@ interface AuthState {
   loading: boolean;
   initialized: boolean;
   initialize: () => Promise<void>;
-  signIn: (email: string, password: string) => Promise<{ error?: string }>;
+  signIn: (email: string, password: string) => Promise<{ error?: string; needsConfirmation?: boolean }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error?: string; alreadyRegistered?: boolean }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error?: string }>;
   updatePassword: (newPassword: string) => Promise<{ error?: string }>;
+  resendConfirmation: (email: string) => Promise<{ error?: string }>;
   updateProfile: (data: Partial<Profile>) => Promise<void>;
   loadCouple: (userId: string) => Promise<void>;
   createCouple: (coupleName: string, anniversaryDate: string) => Promise<{ error?: string }>;
@@ -106,7 +107,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     set({ loading: false });
-    if (error) return { error: error.message };
+    if (error) {
+      const msg = error.message.toLowerCase();
+      if (msg.includes('not confirmed') || msg.includes('confirm')) {
+        return { error: '이메일 인증이 완료되지 않았어요. 받은 인증 메일의 링크를 눌러주세요.', needsConfirmation: true };
+      }
+      if (msg.includes('invalid') || msg.includes('credentials')) {
+        return { error: '이메일 또는 비밀번호가 올바르지 않아요.' };
+      }
+      return { error: error.message };
+    }
     return {};
   },
 
@@ -156,6 +166,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   updatePassword: async (newPassword) => {
     const supabase = createClient();
     const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) return { error: error.message };
+    return {};
+  },
+
+  resendConfirmation: async (email) => {
+    const supabase = createClient();
+    const emailRedirectTo = typeof window !== 'undefined' ? `${window.location.origin}/login` : undefined;
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email.trim(),
+      options: { emailRedirectTo },
+    });
     if (error) return { error: error.message };
     return {};
   },
