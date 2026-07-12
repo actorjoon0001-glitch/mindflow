@@ -1,15 +1,48 @@
-export const APP_NAME = 'MindFlow';
-export const APP_DESCRIPTION = 'AI-powered memo & schedule management';
+export const APP_NAME = '우리';
+export const APP_DESCRIPTION = '둘만의 캘린더 · 지도 · 채팅';
 
 export const NAV_ITEMS = [
-  { label: '대시보드', href: '/dashboard', icon: 'LayoutDashboard' },
+  { label: '홈', href: '/dashboard', icon: 'Heart' },
+  { label: '캘린더', href: '/calendar', icon: 'Calendar' },
+  { label: '지도', href: '/map', icon: 'Map' },
+  { label: '채팅', href: '/chat', icon: 'MessageCircle' },
+  { label: 'AI 추천', href: '/assistant', icon: 'Sparkles' },
   { label: '메모', href: '/notes', icon: 'FileText' },
   { label: '할 일', href: '/tasks', icon: 'CheckSquare' },
-  { label: '캘린더', href: '/calendar', icon: 'Calendar' },
-  { label: '근태관리', href: '/attendance', icon: 'Clock' },
-  { label: 'AI 비서', href: '/assistant', icon: 'Bot' },
   { label: '설정', href: '/settings', icon: 'Settings' },
 ] as const;
+
+// Primary items shown in the mobile bottom bar.
+export const MOBILE_NAV_ITEMS = [
+  { label: '홈', href: '/dashboard', icon: 'Heart' },
+  { label: '캘린더', href: '/calendar', icon: 'Calendar' },
+  { label: '지도', href: '/map', icon: 'Map' },
+  { label: '채팅', href: '/chat', icon: 'MessageCircle' },
+  { label: 'AI', href: '/assistant', icon: 'Sparkles' },
+] as const;
+
+export const COUPLE_EVENT_CATEGORIES: Record<string, { label: string; color: string }> = {
+  date: { label: '데이트', color: '#ec4899' },
+  anniversary: { label: '기념일', color: '#f43f5e' },
+  trip: { label: '여행', color: '#06b6d4' },
+  plan: { label: '약속', color: '#8b5cf6' },
+  etc: { label: '기타', color: '#6366f1' },
+};
+
+export const COUPLE_PLACE_CATEGORIES: Record<string, { label: string; emoji: string; color: string }> = {
+  restaurant: { label: '맛집', emoji: '🍽️', color: '#f97316' },
+  cafe: { label: '카페', emoji: '☕', color: '#a16207' },
+  activity: { label: '액티비티', emoji: '🎡', color: '#8b5cf6' },
+  travel: { label: '여행', emoji: '✈️', color: '#06b6d4' },
+  etc: { label: '기타', emoji: '📍', color: '#ec4899' },
+};
+
+export const MILESTONE_COLORS: Record<string, string> = {
+  start: 'bg-rose-500/20 text-rose-300',
+  hundred: 'bg-pink-500/20 text-pink-300',
+  month: 'bg-fuchsia-500/20 text-fuchsia-300',
+  year: 'bg-amber-500/20 text-amber-300',
+};
 
 export const TASK_PRIORITY_COLORS: Record<string, string> = {
   low: 'bg-slate-500/20 text-slate-400',

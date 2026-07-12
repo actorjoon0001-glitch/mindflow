@@ -18,6 +18,14 @@ export interface ExtractedEvent {
   location?: string;
 }
 
+export interface CoupleContext {
+  coupleName?: string;
+  dayCount?: number;
+  anniversaryDate?: string;
+  upcomingEvents?: string[];
+  recentPlaces?: string[];
+}
+
 export interface ChatRequest {
   message: string;
   context?: {
@@ -25,6 +33,7 @@ export interface ChatRequest {
     upcomingTasks?: string[];
     todayEvents?: string[];
   };
+  couple?: CoupleContext;
 }
 
 export interface ChatResponse {
@@ -34,5 +43,13 @@ export interface ChatResponse {
 
 export type AIAction =
   | { type: 'create_task'; data: ExtractedTask }
-  | { type: 'create_event'; data: ExtractedEvent }
+  | { type: 'create_event'; data: ExtractedEvent & { category?: string } }
+  | { type: 'create_couple_event'; data: ExtractedEvent & { category?: string } }
   | { type: 'create_note'; data: { title: string; content: string } };
+
+export interface MonthlyRecapRequest {
+  monthLabel: string;
+  dayCount: number;
+  events: { title: string; date: string; location?: string }[];
+  places: { name: string; category: string; visitedDate?: string }[];
+}

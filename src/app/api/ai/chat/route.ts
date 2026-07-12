@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { aiProvider } from '@/lib/ai/provider';
+import { getDayCount } from '@/lib/couple-utils';
+import { COUPLE_EVENT_CATEGORIES } from '@/lib/constants';
+import type { CoupleContext } from '@/types/ai';
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,7 +14,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
     }
 
-    // Get current user from Supabase
     const cookieStore = cookies();
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -30,43 +32,60 @@ export async function POST(request: NextRequest) {
 
     const { data: { user } } = await supabase.auth.getUser();
 
-    // Get AI response with actions
-    const result = await aiProvider.chat(body);
+    // Build couple context for the AI (anniversary, upcoming events, recent places).
+    let coupleId: string | null = null;
+    const coupleContext: CoupleContext = {};
 
-    // Execute actions if user is authenticated
+    if (user) {
+      const { data: membership } = await supabase
+        .from('couple_members')
+        .select('couple_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (membership) {
+        coupleId = membership.couple_id;
+        const nowIso = new Date().toISOString();
+        const [{ data: couple }, { data: events }, { data: places }] = await Promise.all([
+          supabase.from('couples').select('couple_name, anniversary_date').eq('id', coupleId).maybeSingle(),
+          supabase.from('couple_events').select('title, start_time, location').eq('couple_id', coupleId).gte('start_time', nowIso).order('start_time', { ascending: true }).limit(8),
+          supabase.from('couple_places').select('name, category').eq('couple_id', coupleId).order('created_at', { ascending: false }).limit(8),
+        ]);
+
+        if (couple) {
+          coupleContext.coupleName = couple.couple_name;
+          coupleContext.anniversaryDate = couple.anniversary_date;
+          coupleContext.dayCount = getDayCount(couple.anniversary_date);
+        }
+        coupleContext.upcomingEvents = (events || []).map(
+          (e) => `${new Date(e.start_time).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })} ${e.title}${e.location ? ` @${e.location}` : ''}`,
+        );
+        coupleContext.recentPlaces = (places || []).map((p) => p.name);
+      }
+    }
+
+    const result = await aiProvider.chat({ message: body.message, couple: coupleContext });
+
+    // Execute actions (only couple events are supported for the couple assistant).
     const executedActions: string[] = [];
 
-    if (user && result.actions?.length) {
+    if (user && coupleId && result.actions?.length) {
       for (const action of result.actions) {
         try {
-          if (action.type === 'create_note') {
-            const { error } = await supabase.from('notes').insert({
-              user_id: user.id,
-              title: action.data.title || '새 메모',
-              content: action.data.content || '',
-            });
-            if (!error) executedActions.push(`메모 "${action.data.title}" 생성`);
-          }
-
-          if (action.type === 'create_task') {
-            const { error } = await supabase.from('tasks').insert({
-              user_id: user.id,
-              title: action.data.title,
-              priority: action.data.priority || 'medium',
-              due_date: action.data.due_date || null,
-            });
-            if (!error) executedActions.push(`할 일 "${action.data.title}" 생성`);
-          }
-
-          if (action.type === 'create_event') {
-            const { error } = await supabase.from('events').insert({
-              user_id: user.id,
+          if (action.type === 'create_couple_event' || action.type === 'create_event') {
+            const category = (action.data as { category?: string }).category || 'date';
+            const color = COUPLE_EVENT_CATEGORIES[category]?.color || COUPLE_EVENT_CATEGORIES.date.color;
+            const { error } = await supabase.from('couple_events').insert({
+              couple_id: coupleId,
+              created_by: user.id,
               title: action.data.title,
               start_time: action.data.start_time,
-              end_time: action.data.end_time || new Date(new Date(action.data.start_time).getTime() + 60 * 60 * 1000).toISOString(),
+              end_time: action.data.end_time || new Date(new Date(action.data.start_time).getTime() + 2 * 60 * 60 * 1000).toISOString(),
               location: action.data.location || null,
+              category,
+              color,
             });
-            if (!error) executedActions.push(`일정 "${action.data.title}" 생성`);
+            if (!error) executedActions.push(`일정 "${action.data.title}" 을(를) 캘린더에 추가`);
           }
         } catch (e) {
           console.error('Action execution error:', e);

@@ -6,11 +6,13 @@ import { Button } from '@/components/ui/button';
 import { useNotifications } from '@/hooks/use-notifications';
 
 const pageNames: Record<string, string> = {
-  '/dashboard': '대시보드',
+  '/dashboard': '홈',
+  '/calendar': '캘린더',
+  '/map': '지도',
+  '/chat': '채팅',
+  '/assistant': 'AI 추천',
   '/notes': '메모',
   '/tasks': '할 일',
-  '/calendar': '캘린더',
-  '/assistant': 'AI 비서',
   '/settings': '설정',
 };
 

@@ -203,3 +203,16 @@ $$ language plpgsql security definer;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
+-- ============================================
+-- COUPLE FEATURES
+-- ============================================
+-- Couple pairing, shared calendar, place map, and private chat.
+-- See migrations/0002_couple.sql for the full definitions (tables, RLS,
+-- the my_couple_id() helper, triggers, and realtime setup).
+--
+--   couples          — one row per couple (couple_name, anniversary_date, invite_code)
+--   couple_members   — links up to two profiles to a couple (one couple per user)
+--   couple_events    — shared calendar entries, visible to both partners
+--   couple_places    — map records of places the couple visited (lat/lng, rating, memo)
+--   couple_messages  — private 1:1 chat messages (realtime enabled)

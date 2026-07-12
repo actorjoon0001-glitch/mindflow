@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import {
-  Send, Bot, User, Trash2, Sparkles, Loader2, Mic, MicOff,
+  Send, Sparkles, User, Trash2, Loader2, Mic, MicOff, Heart, CalendarHeart,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -13,9 +13,25 @@ export default function AssistantPage() {
   const { messages, loading, initialLoading, sendMessage, clearChat } = useChat();
   const [input, setInput] = useState('');
   const [isListening, setIsListening] = useState(false);
+  const [recap, setRecap] = useState<{ label: string; text: string } | null>(null);
+  const [recapLoading, setRecapLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const loadRecap = async () => {
+    setRecapLoading(true);
+    try {
+      const res = await fetch('/api/ai/recap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (data.recap) setRecap({ label: data.monthLabel, text: data.recap });
+    } catch { /* ignore */ }
+    setRecapLoading(false);
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -75,10 +91,10 @@ export default function AssistantPage() {
   };
 
   const suggestions = [
-    '오늘 할 일 정리해줘',
-    '이번 주 일정 알려줘',
-    '메모 요약하는 방법 알려줘',
-    '할 일 우선순위 정해줘',
+    '이번 주말 데이트 코스 추천해줘',
+    '분위기 좋은 맛집 추천해줘',
+    '다가오는 기념일 알려줘',
+    '토요일 저녁 7시 데이트 일정 잡아줘',
   ];
 
   return (
@@ -86,20 +102,41 @@ export default function AssistantPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-brand-500/20">
-            <Bot size={20} className="text-brand-400" />
+          <div className="p-2 rounded-xl bg-rose-500/20">
+            <Sparkles size={20} className="text-rose-400" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-gray-100">AI 비서</h2>
-            <p className="text-xs text-gray-500">메모 정리, 할 일, 일정 관리를 도와드려요</p>
+            <h2 className="text-base font-semibold text-gray-100">AI 데이트 플래너</h2>
+            <p className="text-xs text-gray-500">데이트 코스·맛집 추천, 우리 일정 정리를 도와드려요</p>
           </div>
         </div>
-        {messages.length > 0 && (
-          <Button variant="ghost" size="sm" onClick={clearChat} className="text-gray-500">
-            <Trash2 size={14} /> 대화 초기화
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={loadRecap} loading={recapLoading}>
+            <CalendarHeart size={14} /> 이번 달 정리
           </Button>
-        )}
+          {messages.length > 0 && (
+            <Button variant="ghost" size="sm" onClick={clearChat} className="text-gray-500">
+              <Trash2 size={14} />
+            </Button>
+          )}
+        </div>
       </div>
+
+      {/* Monthly recap */}
+      {recap && (
+        <Card className="mb-4 bg-gradient-to-br from-rose-950/40 to-surface-50 border-rose-900/40">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-2">
+              <Heart size={16} className="text-rose-400 mt-0.5 shrink-0" fill="currentColor" />
+              <div>
+                <p className="text-xs font-medium text-rose-300 mb-1">{recap.label} 우리 이야기</p>
+                <p className="text-sm text-gray-200 leading-relaxed whitespace-pre-wrap">{recap.text}</p>
+              </div>
+            </div>
+            <button onClick={() => setRecap(null)} className="text-gray-600 hover:text-gray-400 text-xs shrink-0">닫기</button>
+          </div>
+        </Card>
+      )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto space-y-4 pb-4">
@@ -109,12 +146,12 @@ export default function AssistantPage() {
           </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full py-12">
-            <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mb-4">
-              <Sparkles size={32} className="text-brand-400" />
+            <div className="w-16 h-16 rounded-2xl bg-rose-500/10 flex items-center justify-center mb-4">
+              <Heart size={30} className="text-rose-400" fill="currentColor" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-200 mb-1">MindFlow AI 비서</h3>
+            <h3 className="text-lg font-semibold text-gray-200 mb-1">우리의 AI 데이트 플래너</h3>
             <p className="text-sm text-gray-500 text-center max-w-sm mb-6">
-              메모 정리, 할 일 관리, 일정 관리를 도와드립니다.<br />무엇이든 물어보세요!
+              데이트 코스와 맛집을 추천하고, 캘린더에 일정도 잡아드려요.<br />무엇이든 물어보세요! 💕
             </p>
             <div className="grid grid-cols-2 gap-2 w-full max-w-sm">
               {suggestions.map((s) => (
@@ -138,8 +175,8 @@ export default function AssistantPage() {
               )}
             >
               {msg.role === 'assistant' && (
-                <div className="w-8 h-8 rounded-lg bg-brand-500/20 flex items-center justify-center shrink-0 mt-1">
-                  <Bot size={16} className="text-brand-400" />
+                <div className="w-8 h-8 rounded-lg bg-rose-500/20 flex items-center justify-center shrink-0 mt-1">
+                  <Sparkles size={16} className="text-rose-400" />
                 </div>
               )}
               <div
@@ -169,8 +206,8 @@ export default function AssistantPage() {
 
         {loading && (
           <div className="flex gap-3">
-            <div className="w-8 h-8 rounded-lg bg-brand-500/20 flex items-center justify-center shrink-0">
-              <Bot size={16} className="text-brand-400" />
+            <div className="w-8 h-8 rounded-lg bg-rose-500/20 flex items-center justify-center shrink-0">
+              <Sparkles size={16} className="text-rose-400" />
             </div>
             <div className="bg-surface-100 border border-surface-300 rounded-2xl rounded-bl-md px-4 py-3">
               <div className="flex gap-1">

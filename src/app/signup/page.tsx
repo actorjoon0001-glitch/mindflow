@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Brain, ArrowRight, Check } from 'lucide-react';
+import { Heart, ArrowRight, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuthStore } from '@/stores/auth-store';
@@ -59,24 +59,24 @@ export default function SignupPage() {
       <div className="hidden lg:flex lg:flex-1 items-center justify-center bg-gradient-to-br from-brand-950 via-surface to-surface p-12">
         <div className="max-w-md space-y-6">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-brand-600 flex items-center justify-center text-white">
-              <Brain size={28} />
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center text-white">
+              <Heart size={26} fill="currentColor" />
             </div>
-            <span className="text-3xl font-bold text-white">MindFlow</span>
+            <span className="text-3xl font-bold text-white">우리</span>
           </div>
           <h2 className="text-2xl font-semibold text-gray-200 leading-relaxed">
-            생각만 적으면,<br />
-            나머지는 AI가 알아서.
+            둘이 함께,<br />
+            더 특별한 매일을.
           </h2>
           <div className="space-y-3 pt-4">
             {[
-              '메모를 작성하면 AI가 자동 요약',
-              '할 일과 일정을 자동으로 추출',
-              'AI 비서와 대화하며 관리',
+              '기념일 D-day를 자동으로 챙겨주는 캘린더',
+              '함께 다녀온 곳을 지도에 기록',
+              '둘만의 채팅과 AI 데이트 추천',
             ].map((item) => (
               <div key={item} className="flex items-center gap-3">
-                <div className="w-5 h-5 rounded-full bg-brand-500/20 flex items-center justify-center shrink-0">
-                  <Check size={12} className="text-brand-400" />
+                <div className="w-5 h-5 rounded-full bg-rose-500/20 flex items-center justify-center shrink-0">
+                  <Check size={12} className="text-rose-400" />
                 </div>
                 <span className="text-gray-300 text-sm">{item}</span>
               </div>
@@ -89,10 +89,10 @@ export default function SignupPage() {
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-sm space-y-8">
           <div className="lg:hidden flex items-center gap-3 justify-center mb-8">
-            <div className="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center text-white">
-              <Brain size={24} />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center text-white">
+              <Heart size={22} fill="currentColor" />
             </div>
-            <span className="text-2xl font-bold text-white">MindFlow</span>
+            <span className="text-2xl font-bold text-white">우리</span>
           </div>
 
           <div>

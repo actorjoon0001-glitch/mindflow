@@ -1,20 +1,26 @@
 'use client';
 
 import { useState } from 'react';
-import { Save, User, Bell, Globe, Brain, LogOut } from 'lucide-react';
+import { Save, User, Bell, Globe, Brain, LogOut, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Avatar } from '@/components/ui/avatar';
+import { InviteCode } from '@/components/couple/couple-gate';
 import { useAuthStore } from '@/stores/auth-store';
+import { getDayCount } from '@/lib/couple-utils';
 
 export default function SettingsPage() {
-  const { profile, updateProfile, signOut } = useAuthStore();
+  const { profile, updateProfile, signOut, couple, partner, updateCouple } = useAuthStore();
   const [fullName, setFullName] = useState(profile?.full_name || '');
   const [timezone, setTimezone] = useState(profile?.timezone || 'Asia/Seoul');
   const [language, setLanguage] = useState(profile?.language || 'ko');
   const [notification, setNotification] = useState(profile?.notification_enabled ?? true);
   const [saving, setSaving] = useState(false);
+
+  const [coupleName, setCoupleName] = useState(couple?.couple_name || '');
+  const [anniversary, setAnniversary] = useState(couple?.anniversary_date || '2026-06-06');
+  const [savingCouple, setSavingCouple] = useState(false);
 
   const handleSave = async () => {
     setSaving(true);
@@ -27,8 +33,43 @@ export default function SettingsPage() {
     setSaving(false);
   };
 
+  const handleSaveCouple = async () => {
+    setSavingCouple(true);
+    await updateCouple({ couple_name: coupleName || '우리', anniversary_date: anniversary });
+    setSavingCouple(false);
+  };
+
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
+      {/* Couple */}
+      {couple && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Heart size={18} className="text-rose-400" fill="currentColor" />
+              <CardTitle>우리 커플</CardTitle>
+            </div>
+            <span className="text-xs text-rose-300">함께한 지 {getDayCount(couple.anniversary_date).toLocaleString()}일</span>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Input id="coupleName" label="우리 이름" value={coupleName} onChange={(e) => setCoupleName(e.target.value)} placeholder="예) 지은❤️민수" />
+            <Input id="anniversary" label="사귄 날" type="date" value={anniversary} onChange={(e) => setAnniversary(e.target.value)} />
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-200">
+                  {partner ? `💑 ${partner.full_name || partner.email}` : '아직 상대가 연결되지 않았어요'}
+                </p>
+                {!partner && <p className="text-xs text-gray-500 mt-0.5">아래 초대 코드를 상대에게 공유하세요</p>}
+              </div>
+              {!partner && <InviteCode code={couple.invite_code} />}
+            </div>
+            <div className="flex justify-end">
+              <Button onClick={handleSaveCouple} loading={savingCouple}><Save size={16} /> 커플 정보 저장</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Profile */}
       <Card>
         <CardHeader>

@@ -131,6 +131,66 @@ export interface ChatMessage {
   created_at: string;
 }
 
+export type CoupleEventCategory = 'date' | 'anniversary' | 'trip' | 'plan' | 'etc';
+export type CouplePlaceCategory = 'restaurant' | 'cafe' | 'activity' | 'travel' | 'etc';
+
+export interface Couple {
+  id: string;
+  couple_name: string;
+  anniversary_date: string; // YYYY-MM-DD
+  invite_code: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CoupleMember {
+  couple_id: string;
+  user_id: string;
+  created_at: string;
+}
+
+export interface CoupleEvent {
+  id: string;
+  couple_id: string;
+  created_by: string | null;
+  title: string;
+  description: string | null;
+  start_time: string;
+  end_time: string;
+  all_day: boolean;
+  location: string | null;
+  color: string;
+  category: CoupleEventCategory;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CouplePlace {
+  id: string;
+  couple_id: string;
+  created_by: string | null;
+  name: string;
+  address: string | null;
+  lat: number;
+  lng: number;
+  memo: string | null;
+  category: CouplePlaceCategory;
+  rating: number | null;
+  visited_date: string | null;
+  photo_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CoupleMessage {
+  id: string;
+  couple_id: string;
+  sender_id: string | null;
+  content: string;
+  created_at: string;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -149,6 +209,31 @@ export interface Database {
         Row: AttendanceSettings;
         Insert: Partial<AttendanceSettings>;
         Update: Partial<AttendanceSettings>;
+      };
+      couples: {
+        Row: Couple;
+        Insert: Partial<Couple> & { invite_code: string };
+        Update: Partial<Couple>;
+      };
+      couple_members: {
+        Row: CoupleMember;
+        Insert: { couple_id: string; user_id: string };
+        Update: Partial<CoupleMember>;
+      };
+      couple_events: {
+        Row: CoupleEvent;
+        Insert: Partial<CoupleEvent> & { couple_id: string; title: string; start_time: string; end_time: string };
+        Update: Partial<CoupleEvent>;
+      };
+      couple_places: {
+        Row: CouplePlace;
+        Insert: Partial<CouplePlace> & { couple_id: string; name: string; lat: number; lng: number };
+        Update: Partial<CouplePlace>;
+      };
+      couple_messages: {
+        Row: CoupleMessage;
+        Insert: Partial<CoupleMessage> & { couple_id: string; sender_id: string; content: string };
+        Update: Partial<CoupleMessage>;
       };
     };
   };

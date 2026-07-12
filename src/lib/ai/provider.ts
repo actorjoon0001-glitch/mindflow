@@ -1,4 +1,4 @@
-import type { AISummaryResult, ChatRequest, ChatResponse } from '@/types/ai';
+import type { AISummaryResult, ChatRequest, ChatResponse, MonthlyRecapRequest } from '@/types/ai';
 
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
@@ -88,57 +88,46 @@ ${content}`;
     const tomorrowISO = tomorrowDate.toISOString().split('T')[0];
     const todayISO = today.toISOString().split('T')[0];
 
-    const systemPrompt = `당신은 MindFlow AI 비서입니다. 사용자의 메모, 할 일, 일정을 실제로 생성할 수 있습니다.
+    const c = request.couple;
+    const systemPrompt = `당신은 커플 앱 "${c?.coupleName || '우리'}"의 다정한 AI 데이트 플래너입니다.
+두 연인을 위해 데이트 코스와 맛집을 추천하고, 기념일을 챙기고, 공유 캘린더에 일정을 추가해 줍니다.
 
 오늘 날짜: ${todayStr} (${todayISO})
 내일 날짜: ${tomorrowISO}
+${c?.dayCount ? `우리가 사귄 지: ${c.dayCount}일째` : ''}
+${c?.anniversaryDate ? `사귄 날: ${c.anniversaryDate}` : ''}
 
 ## 응답 규칙
 반드시 아래 JSON 형식으로만 응답하세요 (다른 텍스트 없이):
 {
-  "content": "사용자에게 보여줄 친근한 한국어 응답 메시지",
+  "content": "두 사람에게 보여줄 따뜻하고 친근한 한국어 메시지",
   "actions": []
 }
 
-## 액션 타입
-사용자가 메모/할일/일정을 만들어달라고 하면 actions 배열에 추가하세요:
+## 역할
+- 데이트 코스 추천: 동선(오전→점심→오후→저녁)을 고려해 구체적으로 제안하세요. 지역/날씨/예산을 물어도 좋아요.
+- 맛집 추천: 분위기와 메뉴를 곁들여 2~3곳 추천하세요.
+- 기념일 챙기기: 100일, 200일, 1주년 등 다가오는 기념일을 상기시키고 이벤트를 제안하세요.
+- 일정 정리: 이번 달/이번 주 우리 일정을 예쁘게 요약해 주세요.
 
-메모 생성:
-{"type": "create_note", "data": {"title": "제목", "content": "내용"}}
-
-할 일 생성:
-{"type": "create_task", "data": {"title": "제목", "priority": "low|medium|high|urgent", "due_date": "YYYY-MM-DD 또는 null"}}
-
-일정 생성:
-{"type": "create_event", "data": {"title": "제목", "start_time": "YYYY-MM-DDTHH:mm:ss", "end_time": "YYYY-MM-DDTHH:mm:ss", "location": "장소 또는 null"}}
+## 액션 타입 (공유 캘린더에 일정 추가 시)
+{"type": "create_couple_event", "data": {"title": "제목", "start_time": "YYYY-MM-DDTHH:mm:ss", "end_time": "YYYY-MM-DDTHH:mm:ss", "location": "장소 또는 null", "category": "date|anniversary|trip|plan|etc"}}
 
 ## 중요
-- 사용자가 뭔가를 기록/저장/추가/생성/등록해달라고 하면 반드시 적절한 action을 포함하세요
-- "내일 1시" = "${tomorrowISO}T13:00:00", 종료는 1시간 후로
-- "오늘 3시" = "${todayISO}T15:00:00"
-- 일정 생성 시 메모도 함께 만들어달라고 하면 create_note + create_event 둘 다 추가
-- 일반 대화(질문, 인사 등)에는 actions를 빈 배열로
-- content에는 이모지를 적절히 사용해서 친근하게 답변
-- content에는 실제로 생성한 항목을 확인해주는 내용 포함`;
+- 사용자가 "일정 잡아줘 / 캘린더에 추가 / 예약해줘" 라고 하면 반드시 create_couple_event action을 포함하세요.
+- "내일 저녁 7시" = "${tomorrowISO}T19:00:00", 종료는 2시간 후로.
+- 단순 추천/대화에는 actions를 빈 배열로 두세요.
+- content에는 이모지를 적절히 써서 사랑스럽고 다정하게 답하세요.`;
 
     const messages: { role: string; content: string }[] = [
       { role: 'system', content: systemPrompt },
     ];
 
-    if (request.context) {
-      let contextStr = '';
-      if (request.context.recentNotes?.length) {
-        contextStr += `\n최근 메모: ${request.context.recentNotes.join(', ')}`;
-      }
-      if (request.context.upcomingTasks?.length) {
-        contextStr += `\n다가오는 할 일: ${request.context.upcomingTasks.join(', ')}`;
-      }
-      if (request.context.todayEvents?.length) {
-        contextStr += `\n오늘 일정: ${request.context.todayEvents.join(', ')}`;
-      }
-      if (contextStr) {
-        messages.push({ role: 'system', content: `사용자 컨텍스트:${contextStr}` });
-      }
+    if (c) {
+      let ctx = '';
+      if (c.upcomingEvents?.length) ctx += `\n다가오는 우리 일정: ${c.upcomingEvents.join(', ')}`;
+      if (c.recentPlaces?.length) ctx += `\n최근 다녀온 곳: ${c.recentPlaces.join(', ')}`;
+      if (ctx) messages.push({ role: 'system', content: `우리 커플 컨텍스트:${ctx}` });
     }
 
     messages.push({ role: 'user', content: request.message });
@@ -159,6 +148,40 @@ ${content}`;
     } catch (error) {
       console.error('AI chat error:', error);
       return { content: '죄송합니다. AI 응답에 실패했습니다. 잠시 후 다시 시도해주세요.', actions: [] };
+    }
+  }
+
+  async monthlyRecap(req: MonthlyRecapRequest): Promise<string> {
+    const eventLines = req.events.length
+      ? req.events.map((e) => `- ${e.date} ${e.title}${e.location ? ` @${e.location}` : ''}`).join('\n')
+      : '(기록된 일정 없음)';
+    const placeLines = req.places.length
+      ? req.places.map((p) => `- ${p.name} (${p.category})${p.visitedDate ? ` ${p.visitedDate}` : ''}`).join('\n')
+      : '(기록된 장소 없음)';
+
+    const prompt = `아래는 한 커플의 "${req.monthLabel}" 기록입니다. 사귄 지 ${req.dayCount}일째인 두 사람을 위해,
+이 달을 돌아보는 따뜻한 월간 리캡을 작성해주세요.
+
+[이 달의 일정]
+${eventLines}
+
+[이 달 다녀온 곳]
+${placeLines}
+
+작성 규칙:
+- 다정하고 감성적인 한국어 말투, 이모지를 적절히 사용
+- 3~5문장의 짧은 회고 + 다음 달을 위한 데이트 제안 1~2가지
+- 기록이 거의 없으면 함께 만들면 좋을 추억을 부드럽게 제안
+- 마크다운 없이 자연스러운 문단으로`;
+
+    try {
+      return await callOpenAI([
+        { role: 'system', content: '당신은 커플의 추억을 정리해주는 다정한 AI입니다.' },
+        { role: 'user', content: prompt },
+      ], 0.8);
+    } catch (error) {
+      console.error('AI recap error:', error);
+      return '이번 달 리캡을 불러오지 못했어요. 잠시 후 다시 시도해주세요. 🥲';
     }
   }
 }
