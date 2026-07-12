@@ -10,21 +10,31 @@ import { useAuthStore } from '@/stores/auth-store';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { signIn, loading } = useAuthStore();
+  const { signIn, loading, resendConfirmation } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [needsConfirmation, setNeedsConfirmation] = useState(false);
+  const [resent, setResent] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setNeedsConfirmation(false);
+    setResent(false);
 
     const result = await signIn(email, password);
     if (result.error) {
-      setError('이메일 또는 비밀번호가 올바르지 않습니다.');
+      setError(result.error);
+      setNeedsConfirmation(!!result.needsConfirmation);
     } else {
       router.push('/dashboard');
     }
+  };
+
+  const handleResend = async () => {
+    const { error } = await resendConfirmation(email);
+    if (!error) setResent(true);
   };
 
   return (
@@ -100,7 +110,20 @@ export default function LoginPage() {
             />
 
             {error && (
-              <p className="text-sm text-red-400 bg-red-500/10 rounded-lg px-3 py-2">{error}</p>
+              <div className="text-sm text-red-400 bg-red-500/10 rounded-lg px-3 py-2">
+                {error}
+                {needsConfirmation && (
+                  <div className="mt-1">
+                    {resent ? (
+                      <span className="text-emerald-400">인증 메일을 다시 보냈어요. 메일함을 확인해주세요.</span>
+                    ) : (
+                      <button type="button" onClick={handleResend} className="underline font-medium hover:text-red-300">
+                        인증 메일 다시 보내기
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
 
             <div className="text-right">
