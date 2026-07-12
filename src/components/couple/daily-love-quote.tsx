@@ -18,7 +18,7 @@ export function DailyLoveQuote() {
 
   // 하루 한 번, 알림 권한이 있으면 오늘의 문구를 푸시로 보냄.
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
     if (Notification.permission !== 'granted') return;
     const today = toDateStr(new Date());
     if (localStorage.getItem(STORAGE_KEY) === today) return;

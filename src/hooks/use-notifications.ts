@@ -23,6 +23,8 @@ export function useNotifications() {
   }, []);
 
   const sendNotification = useCallback((title: string, body: string, url?: string) => {
+    // 일부 인앱 브라우저(카카오톡 등)에는 Notification API가 없어 존재 확인 필수.
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
     if (Notification.permission !== 'granted') return;
 
     if ('serviceWorker' in navigator) {
@@ -117,7 +119,10 @@ export function useNotifications() {
 
   // 주기적 리마인더 체크 (5분마다)
   useEffect(() => {
-    if (!user || Notification.permission !== 'granted') return;
+    if (!user) return;
+    // Notification API가 없는 브라우저(카카오톡 인앱 등)에서는 건너뜀 → 크래시 방지.
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
 
     checkReminders(); // 즉시 한 번 체크
     intervalRef.current = setInterval(checkReminders, 5 * 60 * 1000);
