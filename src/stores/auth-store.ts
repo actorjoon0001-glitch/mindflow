@@ -14,7 +14,7 @@ interface AuthState {
   initialized: boolean;
   initialize: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error?: string }>;
+  signUp: (email: string, password: string, fullName: string) => Promise<{ error?: string; alreadyRegistered?: boolean }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error?: string }>;
   updatePassword: (newPassword: string) => Promise<{ error?: string }>;
@@ -113,13 +113,27 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signUp: async (email, password, fullName) => {
     set({ loading: true });
     const supabase = createClient();
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { full_name: fullName } },
     });
     set({ loading: false });
-    if (error) return { error: error.message };
+
+    if (error) {
+      const msg = error.message.toLowerCase();
+      if (msg.includes('already') || msg.includes('registered') || msg.includes('exists')) {
+        return { error: '이미 사용 중인 이메일이에요.', alreadyRegistered: true };
+      }
+      return { error: error.message };
+    }
+
+    // 이메일 인증이 켜져 있으면 Supabase는 중복 가입을 오류 없이 숨기고,
+    // 대신 identities 를 빈 배열로 반환합니다 → 중복으로 판별.
+    if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      return { error: '이미 사용 중인 이메일이에요.', alreadyRegistered: true };
+    }
+
     return {};
   },
 

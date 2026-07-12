@@ -15,11 +15,13 @@ export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [duplicate, setDuplicate] = useState(false);
   const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setDuplicate(false);
 
     if (password.length < 6) {
       setError('비밀번호는 최소 6자 이상이어야 합니다.');
@@ -29,6 +31,7 @@ export default function SignupPage() {
     const result = await signUp(email, password, fullName);
     if (result.error) {
       setError(result.error);
+      setDuplicate(!!result.alreadyRegistered);
     } else {
       setSuccess(true);
     }
@@ -132,7 +135,17 @@ export default function SignupPage() {
             />
 
             {error && (
-              <p className="text-sm text-red-400 bg-red-500/10 rounded-lg px-3 py-2">{error}</p>
+              <div className="text-sm text-red-400 bg-red-500/10 rounded-lg px-3 py-2">
+                {error}
+                {duplicate && (
+                  <>
+                    {' '}
+                    <Link href="/login" className="underline font-medium hover:text-red-300">로그인하기</Link>
+                    {' 또는 '}
+                    <Link href="/forgot-password" className="underline font-medium hover:text-red-300">비밀번호 찾기</Link>
+                  </>
+                )}
+              </div>
             )}
 
             <Button type="submit" className="w-full" loading={loading}>
