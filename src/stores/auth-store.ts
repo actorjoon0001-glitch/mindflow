@@ -16,6 +16,8 @@ interface AuthState {
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ error?: string }>;
+  updatePassword: (newPassword: string) => Promise<{ error?: string }>;
   updateProfile: (data: Partial<Profile>) => Promise<void>;
   loadCouple: (userId: string) => Promise<void>;
   createCouple: (coupleName: string, anniversaryDate: string) => Promise<{ error?: string }>;
@@ -125,6 +127,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const supabase = createClient();
     await supabase.auth.signOut();
     window.location.href = '/login';
+  },
+
+  resetPassword: async (email) => {
+    const supabase = createClient();
+    const redirectTo = typeof window !== 'undefined'
+      ? `${window.location.origin}/reset-password`
+      : undefined;
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
+    if (error) return { error: error.message };
+    return {};
+  },
+
+  updatePassword: async (newPassword) => {
+    const supabase = createClient();
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) return { error: error.message };
+    return {};
   },
 
   updateProfile: async (data) => {

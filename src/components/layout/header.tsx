@@ -1,9 +1,11 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { Menu, Search, Bell, BellOff, PanelRightOpen } from 'lucide-react';
+import { Menu, Bell, BellOff, Briefcase, Lock, PanelRightOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNotifications } from '@/hooks/use-notifications';
+import { useBossMode } from '@/stores/boss-mode';
+import { useAppLock } from '@/stores/app-lock';
 
 const pageNames: Record<string, string> = {
   '/dashboard': '홈',
@@ -24,6 +26,8 @@ export function Header({ onMenuToggle }: HeaderProps) {
   const pathname = usePathname();
   const title = Object.entries(pageNames).find(([key]) => pathname.startsWith(key))?.[1] || '';
   const { permission, enableNotifications } = useNotifications();
+  const activateBoss = useBossMode((s) => s.activate);
+  const requestLock = useAppLock((s) => s.requestLock);
 
   const handleBellClick = async () => {
     if (permission !== 'granted') {
@@ -47,14 +51,29 @@ export function Header({ onMenuToggle }: HeaderProps) {
         <Button
           variant="ghost"
           size="icon"
+          className="text-gray-400 hover:text-gray-200"
+          title="화면 잠금 (자리 비울 때)"
+          onClick={requestLock}
+        >
+          <Lock size={18} />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-gray-400 hover:text-gray-200"
+          title="업무 화면으로 전환 (Ctrl/⌘+B, 해제: Esc)"
+          onClick={activateBoss}
+        >
+          <Briefcase size={18} />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
           className="text-gray-400"
           title="미니 창 열기"
           onClick={() => window.open('/mini', 'mindflow-mini', 'width=360,height=520,top=100,right=100,resizable=yes')}
         >
           <PanelRightOpen size={18} />
-        </Button>
-        <Button variant="ghost" size="icon" className="text-gray-400">
-          <Search size={18} />
         </Button>
         <Button
           variant="ghost"

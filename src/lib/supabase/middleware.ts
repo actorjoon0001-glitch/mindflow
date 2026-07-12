@@ -29,17 +29,20 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isAuthPage =
-    request.nextUrl.pathname === '/login' ||
-    request.nextUrl.pathname === '/signup';
+  const pathname = request.nextUrl.pathname;
+  // 로그인 없이 접근 가능한 공개 페이지 (비밀번호 재설정 포함)
+  const publicPaths = ['/login', '/signup', '/forgot-password', '/reset-password'];
+  const isPublic = publicPaths.includes(pathname);
 
-  if (!user && !isAuthPage && request.nextUrl.pathname !== '/') {
+  if (!user && !isPublic && pathname !== '/') {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);
   }
 
-  if (user && isAuthPage) {
+  // 이미 로그인된 사용자가 로그인/회원가입에 오면 홈으로.
+  // (reset-password는 복구 세션 상태이므로 리다이렉트하지 않음)
+  if (user && (pathname === '/login' || pathname === '/signup')) {
     const url = request.nextUrl.clone();
     url.pathname = '/dashboard';
     return NextResponse.redirect(url);

@@ -103,6 +103,12 @@ export default function LoginPage() {
               <p className="text-sm text-red-400 bg-red-500/10 rounded-lg px-3 py-2">{error}</p>
             )}
 
+            <div className="text-right">
+              <Link href="/forgot-password" className="text-sm text-gray-500 hover:text-brand-400 transition-colors">
+                비밀번호를 잊으셨나요?
+              </Link>
+            </div>
+
             <Button type="submit" className="w-full" loading={loading}>
               로그인
               <ArrowRight size={16} />
