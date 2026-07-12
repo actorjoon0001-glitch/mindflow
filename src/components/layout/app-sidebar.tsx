@@ -4,24 +4,18 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, FileText, CheckSquare, Calendar,
-  Bot, Settings, LogOut, Brain, ChevronLeft, Clock,
+  Settings, LogOut, Heart, ChevronLeft, Map, MessageCircle, Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar } from '@/components/ui/avatar';
 import { useAuthStore } from '@/stores/auth-store';
+import { NAV_ITEMS } from '@/lib/constants';
 
 const icons: Record<string, typeof LayoutDashboard> = {
-  LayoutDashboard, FileText, CheckSquare, Calendar, Bot, Settings, Clock,
+  LayoutDashboard, FileText, CheckSquare, Calendar, Settings, Heart, Map, MessageCircle, Sparkles,
 };
 
-const navItems = [
-  { label: '대시보드', href: '/dashboard', icon: 'LayoutDashboard' },
-  { label: '메모', href: '/notes', icon: 'FileText' },
-  { label: '할 일', href: '/tasks', icon: 'CheckSquare' },
-  { label: '캘린더', href: '/calendar', icon: 'Calendar' },
-  { label: '근태관리', href: '/attendance', icon: 'Clock' },
-  { label: 'AI 비서', href: '/assistant', icon: 'Bot' },
-];
+const navItems = NAV_ITEMS.filter((item) => item.href !== '/settings');
 
 interface AppSidebarProps {
   collapsed: boolean;
@@ -30,7 +24,7 @@ interface AppSidebarProps {
 
 export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
   const pathname = usePathname();
-  const { profile, signOut } = useAuthStore();
+  const { profile, signOut, couple } = useAuthStore();
 
   return (
     <aside
@@ -41,11 +35,13 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
     >
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 h-16 border-b border-surface-300">
-        <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-brand-600 text-white shrink-0">
-          <Brain size={20} />
+        <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 text-white shrink-0">
+          <Heart size={18} fill="currentColor" />
         </div>
         {!collapsed && (
-          <span className="text-lg font-bold text-gray-100 tracking-tight">MindFlow</span>
+          <span className="text-lg font-bold text-gray-100 tracking-tight truncate">
+            {couple?.couple_name || '우리'}
+          </span>
         )}
         <button
           onClick={onToggle}

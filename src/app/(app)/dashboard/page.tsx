@@ -1,87 +1,91 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
-  FileText, CheckSquare, Calendar, Bot,
-  TrendingUp, Clock, Plus, ArrowRight, Sparkles,
+  Calendar, MapPin, MessageCircle, Sparkles, Heart, ArrowRight, Clock,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { DailyLoveQuote } from '@/components/couple/daily-love-quote';
+import { InviteCode } from '@/components/couple/couple-gate';
 import { useAuthStore } from '@/stores/auth-store';
 import { createClient } from '@/lib/supabase/client';
-import { formatRelativeTime, truncate } from '@/lib/utils';
-import { TASK_PRIORITY_COLORS } from '@/lib/constants';
-import { AttendanceDashboardWidget } from '@/components/attendance/dashboard-widget';
-import type { Note, Task, CalendarEvent } from '@/types';
+import { getDayCount, getUpcomingMilestones } from '@/lib/couple-utils';
+import { COUPLE_PLACE_CATEGORIES } from '@/lib/constants';
+import type { CoupleEvent, CouplePlace } from '@/types';
 
 export default function DashboardPage() {
   const profile = useAuthStore((s) => s.profile);
-  const user = useAuthStore((s) => s.user);
-  const [stats, setStats] = useState({ notes: 0, tasks: 0, completedTasks: 0, events: 0 });
-  const [recentNotes, setRecentNotes] = useState<Note[]>([]);
-  const [upcomingTasks, setUpcomingTasks] = useState<Task[]>([]);
-  const [todayEvents, setTodayEvents] = useState<CalendarEvent[]>([]);
+  const partner = useAuthStore((s) => s.partner);
+  const couple = useAuthStore((s) => s.couple);
+  const [placeCount, setPlaceCount] = useState(0);
+  const [upcomingEvents, setUpcomingEvents] = useState<CoupleEvent[]>([]);
+  const [recentPlaces, setRecentPlaces] = useState<CouplePlace[]>([]);
+
+  const anniversary = couple?.anniversary_date;
+  const dayCount = anniversary ? getDayCount(anniversary) : 0;
+  const nextMilestone = useMemo(
+    () => (anniversary ? getUpcomingMilestones(anniversary, 1)[0] : null),
+    [anniversary],
+  );
 
   useEffect(() => {
-    if (!user) return;
-
+    if (!couple) return;
     async function load() {
       const supabase = createClient();
-      const now = new Date();
-      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-      const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString();
-
-      const [notesRes, tasksRes, completedRes, eventsRes, recentNotesRes, upcomingTasksRes, todayEventsRes] =
-        await Promise.all([
-          supabase.from('notes').select('id', { count: 'exact', head: true }).eq('user_id', user!.id),
-          supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('user_id', user!.id).neq('status', 'done'),
-          supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('user_id', user!.id).eq('status', 'done'),
-          supabase.from('events').select('id', { count: 'exact', head: true }).eq('user_id', user!.id).gte('start_time', startOfDay),
-          supabase.from('notes').select('*').eq('user_id', user!.id).order('updated_at', { ascending: false }).limit(5),
-          supabase.from('tasks').select('*').eq('user_id', user!.id).neq('status', 'done').neq('status', 'cancelled').order('due_date', { ascending: true, nullsFirst: false }).limit(5),
-          supabase.from('events').select('*').eq('user_id', user!.id).gte('start_time', startOfDay).lte('start_time', endOfDay).order('start_time', { ascending: true }),
-        ]);
-
-      setStats({
-        notes: notesRes.count || 0,
-        tasks: tasksRes.count || 0,
-        completedTasks: completedRes.count || 0,
-        events: eventsRes.count || 0,
-      });
-      setRecentNotes(recentNotesRes.data || []);
-      setUpcomingTasks(upcomingTasksRes.data || []);
-      setTodayEvents(todayEventsRes.data || []);
+      const nowIso = new Date().toISOString();
+      const [placesCountRes, eventsRes, placesRes] = await Promise.all([
+        supabase.from('couple_places').select('id', { count: 'exact', head: true }).eq('couple_id', couple!.id),
+        supabase.from('couple_events').select('*').eq('couple_id', couple!.id).gte('start_time', nowIso).order('start_time', { ascending: true }).limit(5),
+        supabase.from('couple_places').select('*').eq('couple_id', couple!.id).order('created_at', { ascending: false }).limit(4),
+      ]);
+      setPlaceCount(placesCountRes.count || 0);
+      setUpcomingEvents(eventsRes.data || []);
+      setRecentPlaces(placesRes.data || []);
     }
     load();
-  }, [user]);
-
-  const greeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 6) return '새벽에도 열정적이시네요';
-    if (hour < 12) return '좋은 아침이에요';
-    if (hour < 18) return '오후도 화이팅';
-    return '수고한 하루였어요';
-  };
+  }, [couple]);
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 animate-fade-in">
-      {/* Greeting */}
-      <div className="space-y-1">
-        <h2 className="text-2xl font-bold text-gray-100">
-          {greeting()}, {profile?.full_name || '사용자'}님 <span className="inline-block animate-bounce">👋</span>
-        </h2>
-        <p className="text-gray-500">오늘도 MindFlow와 함께 생산적인 하루를 시작하세요.</p>
-      </div>
+      {/* Anniversary hero */}
+      <Card className="relative overflow-hidden bg-gradient-to-br from-rose-600 via-pink-600 to-fuchsia-700 border-0 text-white p-6 lg:p-8">
+        <div className="relative z-10">
+          <div className="flex items-center gap-2 text-white/80 text-sm">
+            <Heart size={16} fill="currentColor" /> {couple?.couple_name || '우리'}
+          </div>
+          <div className="mt-2 flex items-end gap-3 flex-wrap">
+            <h2 className="text-4xl lg:text-5xl font-bold tracking-tight">
+              우리 함께한 지 <span className="tabular-nums">{dayCount.toLocaleString()}</span>일
+            </h2>
+          </div>
+          <p className="mt-2 text-white/85 text-sm">
+            {anniversary && `${new Date(anniversary + 'T00:00:00').toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}부터`}
+            {nextMilestone && ` · ${nextMilestone.label}까지 D-${nextMilestone.dday}`}
+          </p>
+          <div className="mt-4 flex items-center gap-2 flex-wrap">
+            {!partner && couple && (
+              <div className="flex items-center gap-2 text-sm bg-white/15 rounded-lg px-3 py-1.5">
+                <span>초대 코드</span> <InviteCode code={couple.invite_code} />
+                <span className="text-white/70">를 상대에게 공유하세요</span>
+              </div>
+            )}
+          </div>
+        </div>
+        <Heart size={180} className="absolute -right-8 -bottom-10 text-white/10" fill="currentColor" />
+      </Card>
 
-      {/* Stats */}
+      {/* Daily love quote */}
+      <DailyLoveQuote />
+
+      {/* Quick stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
         {[
-          { label: '전체 메모', value: stats.notes, icon: FileText, color: 'text-blue-400', bg: 'bg-blue-500/10' },
-          { label: '진행 중 할 일', value: stats.tasks, icon: CheckSquare, color: 'text-amber-400', bg: 'bg-amber-500/10' },
-          { label: '완료한 할 일', value: stats.completedTasks, icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
-          { label: '오늘 일정', value: stats.events, icon: Calendar, color: 'text-purple-400', bg: 'bg-purple-500/10' },
+          { label: '함께한 날', value: `${dayCount.toLocaleString()}일`, icon: Heart, color: 'text-rose-400', bg: 'bg-rose-500/10' },
+          { label: '다음 기념일', value: nextMilestone ? `D-${nextMilestone.dday}` : '-', icon: Sparkles, color: 'text-amber-400', bg: 'bg-amber-500/10' },
+          { label: '다녀온 곳', value: `${placeCount}곳`, icon: MapPin, color: 'text-cyan-400', bg: 'bg-cyan-500/10' },
+          { label: '예정된 일정', value: `${upcomingEvents.length}개`, icon: Calendar, color: 'text-purple-400', bg: 'bg-purple-500/10' },
         ].map((stat) => (
           <Card key={stat.label} className="card-shine">
             <div className="flex items-start justify-between">
@@ -99,67 +103,44 @@ export default function DashboardPage() {
 
       {/* Quick actions */}
       <div className="flex gap-2 overflow-x-auto pb-1">
-        <Link href="/notes?new=true">
-          <Button variant="outline" size="sm" className="whitespace-nowrap">
-            <Plus size={14} /> 새 메모
-          </Button>
-        </Link>
-        <Link href="/tasks">
-          <Button variant="outline" size="sm" className="whitespace-nowrap">
-            <Plus size={14} /> 할 일 추가
-          </Button>
-        </Link>
-        <Link href="/assistant">
-          <Button variant="outline" size="sm" className="whitespace-nowrap">
-            <Sparkles size={14} /> AI 비서
-          </Button>
-        </Link>
+        <Link href="/calendar"><Button variant="outline" size="sm" className="whitespace-nowrap"><Calendar size={14} /> 일정 추가</Button></Link>
+        <Link href="/map"><Button variant="outline" size="sm" className="whitespace-nowrap"><MapPin size={14} /> 장소 기록</Button></Link>
+        <Link href="/chat"><Button variant="outline" size="sm" className="whitespace-nowrap"><MessageCircle size={14} /> 채팅</Button></Link>
+        <Link href="/assistant"><Button variant="outline" size="sm" className="whitespace-nowrap"><Sparkles size={14} /> 데이트 추천</Button></Link>
       </div>
 
-      {/* Content grid */}
       <div className="grid lg:grid-cols-3 gap-4 lg:gap-6">
-        {/* Recent notes */}
+        {/* Upcoming events */}
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>최근 메모</CardTitle>
-            <Link href="/notes" className="text-xs text-brand-400 hover:text-brand-300 flex items-center gap-1">
-              전체보기 <ArrowRight size={12} />
+            <CardTitle>다가오는 우리 일정</CardTitle>
+            <Link href="/calendar" className="text-xs text-brand-400 hover:text-brand-300 flex items-center gap-1">
+              캘린더 <ArrowRight size={12} />
             </Link>
           </CardHeader>
           <CardContent>
-            {recentNotes.length === 0 ? (
+            {upcomingEvents.length === 0 ? (
               <div className="text-center py-8 text-gray-600">
-                <FileText size={32} className="mx-auto mb-2 opacity-50" />
-                <p>아직 메모가 없어요</p>
-                <Link href="/notes?new=true">
-                  <Button variant="ghost" size="sm" className="mt-2">첫 메모 작성하기</Button>
-                </Link>
+                <Calendar size={32} className="mx-auto mb-2 opacity-50" />
+                <p>예정된 일정이 없어요</p>
+                <Link href="/calendar"><Button variant="ghost" size="sm" className="mt-2">첫 일정 만들기</Button></Link>
               </div>
             ) : (
-              <div className="space-y-3">
-                {recentNotes.map((note) => (
-                  <Link key={note.id} href={`/notes/${note.id}`} className="block">
-                    <div className="p-3 rounded-lg hover:bg-surface-200 transition-colors group">
-                      <div className="flex items-start justify-between">
-                        <h4 className="text-sm font-medium text-gray-200 group-hover:text-gray-100">
-                          {note.title || '제목 없음'}
-                        </h4>
-                        <span className="text-xs text-gray-600 shrink-0 ml-3">
-                          {formatRelativeTime(note.updated_at)}
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1 line-clamp-2">
-                        {truncate(note.content || '내용 없음', 100)}
+              <div className="space-y-2">
+                {upcomingEvents.map((event) => (
+                  <div key={event.id} className="flex items-start gap-3 p-2 rounded-lg hover:bg-surface-200 transition-colors">
+                    <div className="w-1 self-stretch min-h-[2.5rem] rounded-full shrink-0" style={{ backgroundColor: event.color }} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm text-gray-200 truncate">{event.title}</p>
+                      <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+                        <Clock size={10} />
+                        {new Date(event.start_time).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', weekday: 'short' })}
+                        {' '}
+                        {new Date(event.start_time).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                        {event.location ? ` · ${event.location}` : ''}
                       </p>
-                      {note.tags.length > 0 && (
-                        <div className="flex gap-1 mt-2">
-                          {note.tags.slice(0, 3).map((tag) => (
-                            <Badge key={tag} variant="primary">{tag}</Badge>
-                          ))}
-                        </div>
-                      )}
                     </div>
-                  </Link>
+                  </div>
                 ))}
               </div>
             )}
@@ -168,88 +149,46 @@ export default function DashboardPage() {
 
         {/* Sidebar column */}
         <div className="space-y-4">
-          {/* Today attendance */}
-          <AttendanceDashboardWidget />
-
-          {/* Upcoming tasks */}
+          {/* Recent places */}
           <Card>
             <CardHeader>
-              <CardTitle>다가오는 할 일</CardTitle>
-              <Link href="/tasks" className="text-xs text-brand-400 hover:text-brand-300 flex items-center gap-1">
-                전체보기 <ArrowRight size={12} />
+              <CardTitle>최근 다녀온 곳</CardTitle>
+              <Link href="/map" className="text-xs text-brand-400 hover:text-brand-300 flex items-center gap-1">
+                지도 <ArrowRight size={12} />
               </Link>
             </CardHeader>
             <CardContent>
-              {upcomingTasks.length === 0 ? (
-                <p className="text-center py-4 text-gray-600 text-sm">할 일이 없어요</p>
+              {recentPlaces.length === 0 ? (
+                <p className="text-center py-4 text-gray-600 text-sm">아직 기록이 없어요</p>
               ) : (
                 <div className="space-y-2">
-                  {upcomingTasks.map((task) => (
-                    <div key={task.id} className="flex items-start gap-3 p-2 rounded-lg hover:bg-surface-200 transition-colors">
-                      <div className="w-4 h-4 rounded border border-surface-400 mt-0.5 shrink-0" />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm text-gray-200 truncate">{task.title}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge className={TASK_PRIORITY_COLORS[task.priority]}>{task.priority}</Badge>
-                          {task.due_date && (
-                            <span className="text-xs text-gray-600 flex items-center gap-1">
-                              <Clock size={10} />
-                              {new Date(task.due_date).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
-                            </span>
-                          )}
+                  {recentPlaces.map((place) => {
+                    const cat = COUPLE_PLACE_CATEGORIES[place.category] || COUPLE_PLACE_CATEGORIES.etc;
+                    return (
+                      <div key={place.id} className="flex items-center gap-2 p-1.5">
+                        <span className="text-lg">{cat.emoji}</span>
+                        <div className="min-w-0">
+                          <p className="text-sm text-gray-200 truncate">{place.name}</p>
+                          {place.visited_date && <p className="text-[11px] text-gray-500">{place.visited_date}</p>}
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Today schedule */}
-          <Card>
-            <CardHeader>
-              <CardTitle>오늘 일정</CardTitle>
-              <Link href="/calendar" className="text-xs text-brand-400 hover:text-brand-300 flex items-center gap-1">
-                캘린더 <ArrowRight size={12} />
-              </Link>
-            </CardHeader>
-            <CardContent>
-              {todayEvents.length === 0 ? (
-                <p className="text-center py-4 text-gray-600 text-sm">오늘 일정이 없어요</p>
-              ) : (
-                <div className="space-y-2">
-                  {todayEvents.map((event) => (
-                    <div key={event.id} className="flex items-start gap-3 p-2">
-                      <div
-                        className="w-1 h-full min-h-[2rem] rounded-full shrink-0"
-                        style={{ backgroundColor: event.color }}
-                      />
-                      <div>
-                        <p className="text-sm text-gray-200">{event.title}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          {new Date(event.start_time).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
-                          {' - '}
-                          {new Date(event.end_time).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* AI Quick Action */}
+          {/* AI recommendation */}
           <Link href="/assistant">
             <Card hover className="bg-gradient-to-br from-brand-950/50 to-surface-50 border-brand-900/30">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-brand-500/20">
-                  <Bot size={20} className="text-brand-400" />
+                  <Sparkles size={20} className="text-brand-400" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-200">AI 비서에게 물어보기</p>
-                  <p className="text-xs text-gray-500">메모 정리, 할 일 관리를 도와드려요</p>
+                  <p className="text-sm font-medium text-gray-200">AI 데이트 추천</p>
+                  <p className="text-xs text-gray-500">코스·맛집 추천, 이번 달 정리</p>
                 </div>
               </div>
             </Card>

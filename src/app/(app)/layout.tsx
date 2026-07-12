@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { AuthProvider } from '@/providers/auth-provider';
+import { CoupleGate } from '@/components/couple/couple-gate';
 import { AppSidebar } from '@/components/layout/app-sidebar';
 import { Header } from '@/components/layout/header';
 import { MobileNav } from '@/components/layout/mobile-nav';
@@ -14,6 +15,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthProvider>
+      <CoupleGate>
       <div className="min-h-screen bg-surface">
         {/* Desktop sidebar */}
         <div className="hidden lg:block">
@@ -51,6 +53,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Mobile bottom nav */}
         <MobileNav />
       </div>
+      </CoupleGate>
     </AuthProvider>
   );
 }

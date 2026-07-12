@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Brain, ArrowRight } from 'lucide-react';
+import { Heart, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuthStore } from '@/stores/auth-store';
@@ -33,30 +33,30 @@ export default function LoginPage() {
       <div className="hidden lg:flex lg:flex-1 items-center justify-center bg-gradient-to-br from-brand-950 via-surface to-surface p-12">
         <div className="max-w-md space-y-6">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-brand-600 flex items-center justify-center text-white">
-              <Brain size={28} />
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center text-white">
+              <Heart size={26} fill="currentColor" />
             </div>
-            <span className="text-3xl font-bold text-white">MindFlow</span>
+            <span className="text-3xl font-bold text-white">우리</span>
           </div>
           <h2 className="text-2xl font-semibold text-gray-200 leading-relaxed">
-            AI가 당신의 생각을 정리하고,<br />
-            할 일과 일정을 자동으로 관리합니다.
+            둘이 함께 만들어가는<br />
+            우리만의 캘린더와 추억 지도.
           </h2>
           <p className="text-gray-400 leading-relaxed">
-            자유롭게 메모하세요. MindFlow가 핵심 요약, 태그, 할 일, 일정을 자동으로 추출해드립니다.
+            기념일을 챙기고, 다녀온 곳을 지도에 남기고, 둘만의 채팅과 AI 데이트 추천까지 함께하세요.
           </p>
           <div className="flex gap-8 pt-4">
             <div>
-              <div className="text-2xl font-bold text-brand-400">AI</div>
-              <div className="text-sm text-gray-500">자동 요약</div>
+              <div className="text-2xl font-bold text-rose-400">기념일</div>
+              <div className="text-sm text-gray-500">D-day 캘린더</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-brand-400">Smart</div>
-              <div className="text-sm text-gray-500">태그 추출</div>
+              <div className="text-2xl font-bold text-rose-400">지도</div>
+              <div className="text-sm text-gray-500">추억 기록</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-brand-400">Auto</div>
-              <div className="text-sm text-gray-500">일정 연동</div>
+              <div className="text-2xl font-bold text-rose-400">AI</div>
+              <div className="text-sm text-gray-500">데이트 추천</div>
             </div>
           </div>
         </div>
@@ -66,10 +66,10 @@ export default function LoginPage() {
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-sm space-y-8">
           <div className="lg:hidden flex items-center gap-3 justify-center mb-8">
-            <div className="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center text-white">
-              <Brain size={24} />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center text-white">
+              <Heart size={22} fill="currentColor" />
             </div>
-            <span className="text-2xl font-bold text-white">MindFlow</span>
+            <span className="text-2xl font-bold text-white">우리</span>
           </div>
 
           <div>
