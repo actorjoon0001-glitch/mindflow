@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Plus, Search, Pin, Tag, FileText } from 'lucide-react';
+import { Plus, Search, Pin, Tag, FileText, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -14,13 +14,23 @@ import { useNotes } from '@/hooks/use-notes';
 import { formatRelativeTime, truncate } from '@/lib/utils';
 
 export default function NotesPage() {
-  const { notes, loading, createNote } = useNotes();
+  const { notes, loading, createNote, deleteNote } = useNotes();
   const searchParams = useSearchParams();
   const [search, setSearch] = useState('');
   const [showNew, setShowNew] = useState(searchParams.get('new') === 'true');
   const [newTitle, setNewTitle] = useState('');
   const [newContent, setNewContent] = useState('');
   const [creating, setCreating] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDelete = async (e: React.MouseEvent, id: string, title: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!window.confirm(`"${title || '제목 없음'}" 메모를 삭제할까요?`)) return;
+    setDeletingId(id);
+    await deleteNote(id);
+    setDeletingId(null);
+  };
 
   const filtered = notes.filter((n) =>
     n.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -82,12 +92,20 @@ export default function NotesPage() {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((note) => (
             <Link key={note.id} href={`/notes/${note.id}`}>
-              <Card hover className="h-full min-h-[180px] flex flex-col card-shine">
+              <Card hover className="group h-full min-h-[180px] flex flex-col card-shine relative">
+                <button
+                  onClick={(e) => handleDelete(e, note.id, note.title)}
+                  disabled={deletingId === note.id}
+                  className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-600 hover:text-red-400 hover:bg-surface-200 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-50 z-10"
+                  title="메모 삭제"
+                >
+                  <Trash2 size={14} />
+                </button>
                 <div className="flex items-start justify-between mb-2">
-                  <h3 className="text-sm font-semibold text-gray-100 line-clamp-1 flex-1">
+                  <h3 className="text-sm font-semibold text-gray-100 line-clamp-1 flex-1 pr-6">
                     {note.title || '제목 없음'}
                   </h3>
-                  {note.is_pinned && <Pin size={14} className="text-brand-400 shrink-0 ml-2" />}
+                  {note.is_pinned && <Pin size={14} className="text-brand-400 shrink-0 ml-2 mr-6" />}
                 </div>
                 <p className="text-xs text-gray-500 flex-1 line-clamp-4">
                   {truncate(note.content || '내용 없음', 150)}

@@ -1,17 +1,21 @@
 'use client';
 
 import { useState } from 'react';
-import { Save, User, Bell, Globe, Brain, LogOut, Heart } from 'lucide-react';
+import { Save, User, Bell, Globe, Brain, LogOut, Heart, Lock, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Avatar } from '@/components/ui/avatar';
 import { InviteCode } from '@/components/couple/couple-gate';
 import { useAuthStore } from '@/stores/auth-store';
+import { useAppLock } from '@/stores/app-lock';
+import { useBossMode } from '@/stores/boss-mode';
 import { getDayCount } from '@/lib/couple-utils';
 
 export default function SettingsPage() {
   const { profile, updateProfile, signOut, couple, partner, updateCouple } = useAuthStore();
+  const { hasPin, openSetup, lock, clearPin } = useAppLock();
+  const activateBoss = useBossMode((s) => s.activate);
   const [fullName, setFullName] = useState(profile?.full_name || '');
   const [timezone, setTimezone] = useState(profile?.timezone || 'Asia/Seoul');
   const [language, setLanguage] = useState(profile?.language || 'ko');
@@ -168,6 +172,50 @@ export default function SettingsPage() {
               />
             </div>
           </label>
+        </CardContent>
+      </Card>
+
+      {/* Privacy — screen lock & disguise */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Lock size={18} className="text-gray-400" />
+            <CardTitle>화면 잠금 · 위장</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-gray-200">PIN 화면 잠금</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {hasPin ? '자리를 비울 때 잠그면 PIN 4자리로만 열려요.' : '4자리 PIN을 설정하면 화면을 잠글 수 있어요.'}
+              </p>
+            </div>
+            {hasPin ? (
+              <div className="flex gap-2 shrink-0">
+                <Button size="sm" onClick={lock}><Lock size={14} /> 지금 잠그기</Button>
+                <Button size="sm" variant="outline" onClick={() => openSetup(false)}>PIN 변경</Button>
+              </div>
+            ) : (
+              <Button size="sm" className="shrink-0" onClick={() => openSetup(false)}><Lock size={14} /> PIN 설정</Button>
+            )}
+          </div>
+          {hasPin && (
+            <button onClick={clearPin} className="text-xs text-red-400 hover:text-red-300 transition-colors">
+              PIN 삭제 (잠금 해제)
+            </button>
+          )}
+          <div className="border-t border-surface-300 pt-4 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-gray-200 flex items-center gap-1.5">
+                <Briefcase size={14} /> 업무 화면으로 위장
+              </p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                버튼 또는 <kbd className="px-1 rounded bg-surface-200 text-gray-300">Ctrl/⌘+B</kbd> 로 그룹웨어처럼 위장, <kbd className="px-1 rounded bg-surface-200 text-gray-300">Esc</kbd> 로 복귀.
+              </p>
+            </div>
+            <Button size="sm" variant="outline" className="shrink-0" onClick={activateBoss}><Briefcase size={14} /> 지금 위장</Button>
+          </div>
         </CardContent>
       </Card>
 
