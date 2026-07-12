@@ -25,32 +25,17 @@ create index if not exists idx_couple_members_user on public.couple_members(user
 
 -- Returns the couple the current user belongs to. SECURITY DEFINER so it can be
 -- used inside RLS policies without causing recursive policy evaluation.
+-- (Single-quoted body — avoids $$ dollar-quoting so it survives copy-paste into
+--  the Supabase web SQL editor.)
 create or replace function public.my_couple_id()
-returns uuid
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select couple_id from public.couple_members where user_id = auth.uid() limit 1;
-$$;
+returns uuid language sql stable security definer set search_path = public
+as 'select couple_id from public.couple_members where user_id = auth.uid() limit 1';
 
 -- True when the current user and `target` belong to the same couple.
 -- SECURITY DEFINER to bypass couple_members RLS (avoids recursion in policies).
 create or replace function public.same_couple(target uuid)
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select exists (
-    select 1
-    from public.couple_members m1
-    join public.couple_members m2 on m1.couple_id = m2.couple_id
-    where m1.user_id = auth.uid() and m2.user_id = target
-  );
-$$;
+returns boolean language sql stable security definer set search_path = public
+as 'select exists (select 1 from public.couple_members m1 join public.couple_members m2 on m1.couple_id = m2.couple_id where m1.user_id = auth.uid() and m2.user_id = target)';
 
 -- Partners must be able to read each other's profile (name/avatar in chat, etc.)
 drop policy if exists "Couple members can view each other" on public.profiles;
@@ -202,12 +187,6 @@ create trigger on_couple_places_updated
 -- ============================================
 -- REALTIME (for live chat)
 -- ============================================
-do $$
-begin
-  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
-    begin
-      alter publication supabase_realtime add table public.couple_messages;
-    exception when duplicate_object then null;
-    end;
-  end if;
-end$$;
+-- Note: re-running this line after the table is already published raises
+-- "already member of publication" — safe to remove that single line on re-runs.
+alter publication supabase_realtime add table public.couple_messages;
