@@ -14,7 +14,7 @@ interface AuthState {
   initialized: boolean;
   initialize: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ error?: string; needsConfirmation?: boolean }>;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error?: string; alreadyRegistered?: boolean }>;
+  signUp: (email: string, password: string, fullName: string) => Promise<{ error?: string; alreadyRegistered?: boolean; needsConfirmation?: boolean }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error?: string }>;
   updatePassword: (newPassword: string) => Promise<{ error?: string }>;
@@ -144,7 +144,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return { error: '이미 사용 중인 이메일이에요.', alreadyRegistered: true };
     }
 
-    return {};
+    // 세션이 바로 생기면(이메일 인증 꺼짐) 즉시 로그인 상태 → 인증 대기 불필요.
+    return { needsConfirmation: !data.session };
   },
 
   signOut: async () => {

@@ -32,8 +32,12 @@ export default function SignupPage() {
     if (result.error) {
       setError(result.error);
       setDuplicate(!!result.alreadyRegistered);
-    } else {
+    } else if (result.needsConfirmation) {
+      // 이메일 인증이 켜진 경우에만 "메일 확인" 안내.
       setSuccess(true);
+    } else {
+      // 인증 불필요 → 이미 로그인됨. 바로 앱으로.
+      router.push('/dashboard');
     }
   };
 
