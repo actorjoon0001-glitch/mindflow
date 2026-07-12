@@ -236,5 +236,11 @@ export interface Database {
         Update: Partial<CoupleMessage>;
       };
     };
+    Functions: {
+      join_couple_by_code: {
+        Args: { code: string };
+        Returns: string | null;
+      };
+    };
   };
 }

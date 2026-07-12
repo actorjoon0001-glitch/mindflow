@@ -229,26 +229,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (!user) return { error: '로그인이 필요합니다.' };
     const supabase = createClient();
 
-    const { data: couple } = await supabase
-      .from('couples')
-      .select('id')
-      .eq('invite_code', inviteCode.trim().toUpperCase())
-      .maybeSingle();
-
-    if (!couple) return { error: '초대 코드를 찾을 수 없어요.' };
-
-    const { count } = await supabase
-      .from('couple_members')
-      .select('user_id', { count: 'exact', head: true })
-      .eq('couple_id', couple.id);
-
-    if ((count || 0) >= 2) return { error: '이미 두 명이 연결된 커플이에요.' };
-
-    const { error } = await supabase
-      .from('couple_members')
-      .insert({ couple_id: couple.id, user_id: user.id });
+    // SECURITY DEFINER RPC로 합류 (RLS 때문에 비멤버는 couples 를 직접 조회 못 함).
+    const { data, error } = await supabase.rpc('join_couple_by_code', {
+      code: inviteCode.trim().toUpperCase(),
+    });
 
     if (error) return { error: error.message };
+    if (!data) return { error: '초대 코드를 찾을 수 없거나, 이미 두 명이 연결된 커플이에요.' };
 
     await get().loadCouple(user.id);
     return {};
