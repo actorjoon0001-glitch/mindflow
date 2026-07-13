@@ -1,11 +1,13 @@
 'use client';
 
+import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import { Menu, Bell, BellOff, Briefcase, Lock, PanelRightOpen } from 'lucide-react';
+import { Menu, Bell, BellOff, Briefcase, Lock, PanelRightOpen, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useBossMode } from '@/stores/boss-mode';
 import { useAppLock } from '@/stores/app-lock';
+import { useSkin } from '@/stores/skin';
 
 const pageNames: Record<string, string> = {
   '/dashboard': '홈',
@@ -28,6 +30,10 @@ export function Header({ onMenuToggle }: HeaderProps) {
   const { permission, enableNotifications } = useNotifications();
   const activateBoss = useBossMode((s) => s.activate);
   const requestLock = useAppLock((s) => s.requestLock);
+  const { discreet, toggle: toggleSkin, hydrate: hydrateSkin } = useSkin();
+
+  // 스킨/잠금 상태를 이 기기 저장값에서 복원.
+  useEffect(() => { hydrateSkin(); }, [hydrateSkin]);
 
   const handleBellClick = async () => {
     if (permission !== 'granted') {
@@ -48,6 +54,15 @@ export function Header({ onMenuToggle }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-gray-400 hover:text-gray-200"
+          title={discreet ? '커플 테마로 보기' : '디스크릿 모드 (업무용처럼 보이기)'}
+          onClick={toggleSkin}
+        >
+          {discreet ? <EyeOff size={18} /> : <Eye size={18} />}
+        </Button>
         <Button
           variant="ghost"
           size="icon"

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 import { useCoupleChat } from '@/hooks/use-couple-chat';
 import { useAuthStore } from '@/stores/auth-store';
+import { useSkin } from '@/stores/skin';
 import { cn } from '@/lib/utils';
 
 function formatDay(dateStr: string) {
@@ -22,6 +23,7 @@ export default function ChatPage() {
   const user = useAuthStore((s) => s.user);
   const partner = useAuthStore((s) => s.partner);
   const profile = useAuthStore((s) => s.profile);
+  const discreet = useSkin((s) => s.discreet);
   const [input, setInput] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -47,7 +49,7 @@ export default function ChatPage() {
           <h2 className="text-base font-semibold text-gray-100">
             {partner?.full_name || partner?.email || '상대를 기다리는 중'}
           </h2>
-          <p className="text-xs text-gray-500">둘만의 대화 💬</p>
+          <p className="text-xs text-gray-500">{discreet ? '메시지' : '둘만의 대화 💬'}</p>
         </div>
       </div>
 
@@ -59,11 +61,11 @@ export default function ChatPage() {
           </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full py-12">
-            <div className="w-16 h-16 rounded-2xl bg-rose-500/10 flex items-center justify-center mb-4">
-              <Heart size={30} className="text-rose-400" fill="currentColor" />
+            <div className={cn('w-16 h-16 rounded-2xl flex items-center justify-center mb-4', discreet ? 'bg-brand-500/10' : 'bg-rose-500/10')}>
+              <Heart size={30} className={discreet ? 'text-brand-400' : 'text-rose-400'} fill="currentColor" />
             </div>
             <p className="text-sm text-gray-500 text-center">
-              둘만의 채팅을 시작해보세요.<br />첫 메시지를 보내볼까요? 💕
+              {discreet ? <>메시지를 시작해보세요.<br />첫 메시지를 입력해 보세요.</> : <>둘만의 채팅을 시작해보세요.<br />첫 메시지를 보내볼까요? 💕</>}
             </p>
           </div>
         ) : (
@@ -86,7 +88,9 @@ export default function ChatPage() {
                       className={cn(
                         'w-fit max-w-full rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-keep [overflow-wrap:anywhere]',
                         mine
-                          ? 'bg-gradient-to-br from-rose-500 to-pink-600 text-white rounded-br-md'
+                          ? discreet
+                            ? 'bg-brand-600 text-white rounded-br-md'
+                            : 'bg-gradient-to-br from-rose-500 to-pink-600 text-white rounded-br-md'
                           : 'bg-surface-100 border border-surface-300 text-gray-200 rounded-bl-md'
                       )}
                     >

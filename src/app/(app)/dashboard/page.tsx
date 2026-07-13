@@ -4,12 +4,14 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   Calendar, MapPin, MessageCircle, Sparkles, Heart, ArrowRight, Clock,
+  CheckSquare, CalendarClock,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DailyLoveQuote } from '@/components/couple/daily-love-quote';
 import { InviteCode } from '@/components/couple/couple-gate';
 import { useAuthStore } from '@/stores/auth-store';
+import { useSkin } from '@/stores/skin';
 import { createClient } from '@/lib/supabase/client';
 import { getDayCount, getUpcomingMilestones } from '@/lib/couple-utils';
 import { COUPLE_PLACE_CATEGORIES } from '@/lib/constants';
@@ -19,6 +21,7 @@ export default function DashboardPage() {
   const profile = useAuthStore((s) => s.profile);
   const partner = useAuthStore((s) => s.partner);
   const couple = useAuthStore((s) => s.couple);
+  const discreet = useSkin((s) => s.discreet);
   const [placeCount, setPlaceCount] = useState(0);
   const [upcomingEvents, setUpcomingEvents] = useState<CoupleEvent[]>([]);
   const [recentPlaces, setRecentPlaces] = useState<CouplePlace[]>([]);
@@ -49,44 +52,62 @@ export default function DashboardPage() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 animate-fade-in">
-      {/* Anniversary hero */}
-      <Card className="relative overflow-hidden bg-gradient-to-br from-rose-600 via-pink-600 to-fuchsia-700 border-0 text-white p-6 lg:p-8">
-        <div className="relative z-10">
-          <div className="flex items-center gap-2 text-white/80 text-sm">
-            <Heart size={16} fill="currentColor" /> {couple?.couple_name || '우리'}
-          </div>
-          <div className="mt-2 flex items-end gap-3 flex-wrap">
-            <h2 className="text-4xl lg:text-5xl font-bold tracking-tight">
-              우리 함께한 지 <span className="tabular-nums">{dayCount.toLocaleString()}</span>일
-            </h2>
-          </div>
-          <p className="mt-2 text-white/85 text-sm">
-            {anniversary && `${new Date(anniversary + 'T00:00:00').toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}부터`}
-            {nextMilestone && ` · ${nextMilestone.label}까지 D-${nextMilestone.dday}`}
-          </p>
-          <div className="mt-4 flex items-center gap-2 flex-wrap">
-            {!partner && couple && (
-              <div className="flex items-center gap-2 text-sm bg-white/15 rounded-lg px-3 py-1.5">
-                <span>초대 코드</span> <InviteCode code={couple.invite_code} />
-                <span className="text-white/70">를 상대에게 공유하세요</span>
+      {discreet ? (
+        /* 디스크릿 모드: 무채색 업무 대시보드 헤더 */
+        <Card className="p-6">
+          <h2 className="text-xl font-bold text-gray-100">대시보드</h2>
+          <p className="text-sm text-gray-500 mt-1">오늘의 일정과 항목을 확인하세요.</p>
+        </Card>
+      ) : (
+        <>
+          {/* Anniversary hero */}
+          <Card className="relative overflow-hidden bg-gradient-to-br from-rose-600 via-pink-600 to-fuchsia-700 border-0 text-white p-6 lg:p-8">
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 text-white/80 text-sm">
+                <Heart size={16} fill="currentColor" /> {couple?.couple_name || '우리'}
               </div>
-            )}
-          </div>
-        </div>
-        <Heart size={180} className="absolute -right-8 -bottom-10 text-white/10" fill="currentColor" />
-      </Card>
+              <div className="mt-2 flex items-end gap-3 flex-wrap">
+                <h2 className="text-4xl lg:text-5xl font-bold tracking-tight">
+                  우리 함께한 지 <span className="tabular-nums">{dayCount.toLocaleString()}</span>일
+                </h2>
+              </div>
+              <p className="mt-2 text-white/85 text-sm">
+                {anniversary && `${new Date(anniversary + 'T00:00:00').toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}부터`}
+                {nextMilestone && ` · ${nextMilestone.label}까지 D-${nextMilestone.dday}`}
+              </p>
+              <div className="mt-4 flex items-center gap-2 flex-wrap">
+                {!partner && couple && (
+                  <div className="flex items-center gap-2 text-sm bg-white/15 rounded-lg px-3 py-1.5">
+                    <span>초대 코드</span> <InviteCode code={couple.invite_code} />
+                    <span className="text-white/70">를 상대에게 공유하세요</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <Heart size={180} className="absolute -right-8 -bottom-10 text-white/10" fill="currentColor" />
+          </Card>
 
-      {/* Daily love quote */}
-      <DailyLoveQuote />
+          {/* Daily love quote */}
+          <DailyLoveQuote />
+        </>
+      )}
 
       {/* Quick stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-        {[
-          { label: '함께한 날', value: `${dayCount.toLocaleString()}일`, icon: Heart, color: 'text-rose-400', bg: 'bg-rose-500/10' },
-          { label: '다음 기념일', value: nextMilestone ? `D-${nextMilestone.dday}` : '-', icon: Sparkles, color: 'text-amber-400', bg: 'bg-amber-500/10' },
-          { label: '다녀온 곳', value: `${placeCount}곳`, icon: MapPin, color: 'text-cyan-400', bg: 'bg-cyan-500/10' },
-          { label: '예정된 일정', value: `${upcomingEvents.length}개`, icon: Calendar, color: 'text-purple-400', bg: 'bg-purple-500/10' },
-        ].map((stat) => (
+        {(discreet
+          ? [
+              { label: '이용 일수', value: `${dayCount.toLocaleString()}일`, icon: CalendarClock, color: 'text-slate-300', bg: 'bg-slate-500/10' },
+              { label: '다음 일정', value: nextMilestone ? `D-${nextMilestone.dday}` : '-', icon: Sparkles, color: 'text-slate-300', bg: 'bg-slate-500/10' },
+              { label: '저장된 위치', value: `${placeCount}곳`, icon: MapPin, color: 'text-slate-300', bg: 'bg-slate-500/10' },
+              { label: '예정 항목', value: `${upcomingEvents.length}개`, icon: CheckSquare, color: 'text-slate-300', bg: 'bg-slate-500/10' },
+            ]
+          : [
+              { label: '함께한 날', value: `${dayCount.toLocaleString()}일`, icon: Heart, color: 'text-rose-400', bg: 'bg-rose-500/10' },
+              { label: '다음 기념일', value: nextMilestone ? `D-${nextMilestone.dday}` : '-', icon: Sparkles, color: 'text-amber-400', bg: 'bg-amber-500/10' },
+              { label: '다녀온 곳', value: `${placeCount}곳`, icon: MapPin, color: 'text-cyan-400', bg: 'bg-cyan-500/10' },
+              { label: '예정된 일정', value: `${upcomingEvents.length}개`, icon: Calendar, color: 'text-purple-400', bg: 'bg-purple-500/10' },
+            ]
+        ).map((stat) => (
           <Card key={stat.label} className="card-shine">
             <div className="flex items-start justify-between">
               <div>
