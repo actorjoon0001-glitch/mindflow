@@ -11,6 +11,7 @@ import { useCouplePlaces } from '@/hooks/use-couple-places';
 import { cn } from '@/lib/utils';
 import { COUPLE_PLACE_CATEGORIES } from '@/lib/constants';
 import type { CouplePlace, CouplePlaceCategory } from '@/types';
+import type { GeoResult } from '@/app/api/geocode/route';
 
 const CoupleMap = dynamic(() => import('@/components/map/couple-map'), {
   ssr: false,
@@ -42,10 +43,12 @@ export default function MapPage() {
   const [searchQ, setSearchQ] = useState('');
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState('');
+  const [searchResults, setSearchResults] = useState<GeoResult[]>([]);
 
-  const openForm = (lat: number, lng: number, addr?: string) => {
+  const openForm = (lat: number, lng: number, addr?: string, placeName?: string) => {
     setPending({ lat, lng });
     if (addr) setAddress(addr);
+    if (placeName) setName(placeName);
     setShowForm(true);
   };
 
@@ -54,25 +57,31 @@ export default function MapPage() {
     setRating(0); setVisitedDate(''); setPending(null);
   };
 
+  const pickResult = (r: GeoResult) => {
+    setSearchResults([]);
+    setSearchQ('');
+    setFocus(null);
+    openForm(r.lat, r.lng, r.address, r.name);
+  };
+
   const handleSearch = async () => {
     if (!searchQ.trim()) return;
     setSearching(true);
     setSearchError('');
+    setSearchResults([]);
     try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&limit=1&accept-language=ko&q=${encodeURIComponent(searchQ)}`,
-      );
+      const res = await fetch(`/api/geocode?q=${encodeURIComponent(searchQ)}`);
       const data = await res.json();
-      if (data?.length) {
-        const { lat, lon, display_name } = data[0];
-        setName(searchQ);
-        openForm(parseFloat(lat), parseFloat(lon), display_name);
-        setSearchQ('');
+      const results: GeoResult[] = data.results || [];
+      if (results.length === 1) {
+        pickResult(results[0]);
+      } else if (results.length > 1) {
+        setSearchResults(results);
       } else {
-        setSearchError('검색 결과가 없어요. 지도를 눌러 직접 추가해보세요.');
+        setSearchError('검색 결과가 없어요. 지도를 움직여 직접 추가해보세요.');
       }
     } catch {
-      setSearchError('검색에 실패했어요. 지도를 눌러 직접 추가해보세요.');
+      setSearchError('검색에 실패했어요. 지도를 움직여 직접 추가해보세요.');
     }
     setSearching(false);
   };
@@ -118,6 +127,22 @@ export default function MapPage() {
                 {searching ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
               </Button>
             </div>
+
+            {/* 검색 결과 목록 — 선택하면 그 위치에 핀 + 기록 폼 */}
+            {searchResults.length > 0 && (
+              <div className="mt-2 rounded-lg border border-surface-300 bg-surface-100 overflow-hidden">
+                {searchResults.map((r, i) => (
+                  <button
+                    key={`${r.lat}-${r.lng}-${i}`}
+                    onClick={() => pickResult(r)}
+                    className="w-full text-left px-3 py-2 hover:bg-surface-200 transition-colors border-b border-surface-300 last:border-0"
+                  >
+                    <p className="text-sm text-gray-100 truncate">{r.name}</p>
+                    {r.address && <p className="text-xs text-gray-500 truncate">{r.address}</p>}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
