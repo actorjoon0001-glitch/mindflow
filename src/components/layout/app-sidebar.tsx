@@ -4,11 +4,12 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, FileText, CheckSquare, Calendar,
-  Settings, LogOut, Heart, ChevronLeft, Map, MessageCircle, Sparkles,
+  Settings, LogOut, Heart, ChevronLeft, Map, MessageCircle, Sparkles, LayoutGrid,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar } from '@/components/ui/avatar';
 import { useAuthStore } from '@/stores/auth-store';
+import { useSkin } from '@/stores/skin';
 import { NAV_ITEMS } from '@/lib/constants';
 
 const icons: Record<string, typeof LayoutDashboard> = {
@@ -25,6 +26,7 @@ interface AppSidebarProps {
 export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
   const pathname = usePathname();
   const { profile, signOut, couple } = useAuthStore();
+  const discreet = useSkin((s) => s.discreet);
 
   return (
     <aside
@@ -35,12 +37,15 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
     >
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 h-16 border-b border-surface-300">
-        <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 text-white shrink-0">
-          <Heart size={18} fill="currentColor" />
+        <div className={cn(
+          'flex items-center justify-center w-9 h-9 rounded-xl text-white shrink-0',
+          discreet ? 'bg-brand-600' : 'bg-gradient-to-br from-rose-500 to-pink-600'
+        )}>
+          {discreet ? <LayoutGrid size={18} /> : <Heart size={18} fill="currentColor" />}
         </div>
         {!collapsed && (
           <span className="text-lg font-bold text-gray-100 tracking-tight truncate">
-            {couple?.couple_name || '우리'}
+            {discreet ? 'Workspace' : (couple?.couple_name || '우리')}
           </span>
         )}
         <button
@@ -57,7 +62,8 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
-          const Icon = icons[item.icon];
+          // 디스크릿 모드: 하트 홈 아이콘 → 중립 아이콘
+          const Icon = discreet && item.icon === 'Heart' ? LayoutDashboard : icons[item.icon];
           const isActive = pathname.startsWith(item.href);
           return (
             <Link

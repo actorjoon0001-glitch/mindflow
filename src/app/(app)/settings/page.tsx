@@ -10,12 +10,14 @@ import { InviteCode } from '@/components/couple/couple-gate';
 import { useAuthStore } from '@/stores/auth-store';
 import { useAppLock } from '@/stores/app-lock';
 import { useBossMode } from '@/stores/boss-mode';
+import { useSkin } from '@/stores/skin';
 import { getDayCount } from '@/lib/couple-utils';
 
 export default function SettingsPage() {
   const { profile, updateProfile, signOut, couple, partner, updateCouple } = useAuthStore();
   const { hasPin, openSetup, lock, clearPin } = useAppLock();
   const activateBoss = useBossMode((s) => s.activate);
+  const { discreet, toggle: toggleSkin } = useSkin();
   const [fullName, setFullName] = useState(profile?.full_name || '');
   const [timezone, setTimezone] = useState(profile?.timezone || 'Asia/Seoul');
   const [language, setLanguage] = useState(profile?.language || 'ko');
@@ -184,6 +186,19 @@ export default function SettingsPage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-gray-200">디스크릿 모드</p>
+              <p className="text-xs text-gray-500 mt-0.5">하트·핑크·커플명을 감춰 업무 툴처럼 보이게 해요 (헤더 👁 버튼과 동일)</p>
+            </div>
+            <button
+              onClick={toggleSkin}
+              className={`w-11 h-6 rounded-full transition-colors relative shrink-0 ${discreet ? 'bg-brand-600' : 'bg-surface-400'}`}
+            >
+              <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${discreet ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
+            </button>
+          </div>
+          <div className="border-t border-surface-300" />
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-sm font-medium text-gray-200">PIN 화면 잠금</p>
