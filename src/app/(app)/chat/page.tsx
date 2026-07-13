@@ -81,10 +81,10 @@ export default function ChatPage() {
                 )}
                 <div className={cn('flex gap-2 items-end', mine ? 'justify-end' : 'justify-start')}>
                   {!mine && <Avatar name={partner?.full_name || partner?.email || '💗'} size="sm" />}
-                  <div className={cn('flex flex-col', mine ? 'items-end' : 'items-start')}>
+                  <div className={cn('flex flex-col min-w-0 max-w-[80%] sm:max-w-[70%]', mine ? 'items-end' : 'items-start')}>
                     <div
                       className={cn(
-                        'max-w-[75vw] sm:max-w-[70%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words',
+                        'w-fit max-w-full rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-keep [overflow-wrap:anywhere]',
                         mine
                           ? 'bg-gradient-to-br from-rose-500 to-pink-600 text-white rounded-br-md'
                           : 'bg-surface-100 border border-surface-300 text-gray-200 rounded-bl-md'
