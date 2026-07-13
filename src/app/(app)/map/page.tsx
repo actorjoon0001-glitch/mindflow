@@ -102,7 +102,7 @@ export default function MapPage() {
           <h2 className="text-lg font-semibold text-gray-100 flex items-center gap-2">
             <MapPin size={18} className="text-rose-400" /> 우리가 다녀온 곳
           </h2>
-          <p className="text-xs text-gray-500 mt-0.5">지도를 눌러 추억을 남기거나, 장소를 검색하세요 ({places.length}곳)</p>
+          <p className="text-xs text-gray-500 mt-0.5">지도를 움직여 중앙 ⊙ 에 맞추고 <span className="text-rose-300">여기에 기록</span>, 또는 장소 검색 ({places.length}곳)</p>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
           <div className="flex-1 sm:w-64">
@@ -124,7 +124,7 @@ export default function MapPage() {
       {searchError && <p className="text-xs text-amber-400">{searchError}</p>}
 
       <div className="grid lg:grid-cols-[1fr_300px] gap-4">
-        <Card className="p-2 h-[60vh] lg:h-[70vh]">
+        <Card className="p-2 h-[48vh] lg:h-[70vh]">
           <CoupleMap
             places={places}
             focus={focus}
