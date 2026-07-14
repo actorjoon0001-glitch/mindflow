@@ -12,6 +12,8 @@ import { useAppLock } from '@/stores/app-lock';
 import { useBossMode } from '@/stores/boss-mode';
 import { useSkin } from '@/stores/skin';
 import { useNotifPrefs } from '@/stores/notif-prefs';
+import { useNotifications } from '@/hooks/use-notifications';
+import { showLocalNotification } from '@/lib/notify';
 import { getDayCount } from '@/lib/couple-utils';
 
 export default function SettingsPage() {
@@ -20,8 +22,17 @@ export default function SettingsPage() {
   const activateBoss = useBossMode((s) => s.activate);
   const { discreet, toggle: toggleSkin } = useSkin();
   const { chatPreview, toggle: toggleChatPreview, hydrate: hydrateNotifPrefs } = useNotifPrefs();
+  const { enableNotifications } = useNotifications();
+  const [notifTest, setNotifTest] = useState('');
 
   useEffect(() => { hydrateNotifPrefs(); }, [hydrateNotifPrefs]);
+
+  const handleTestNotif = async () => {
+    setNotifTest('');
+    await enableNotifications();
+    const reason = showLocalNotification('💬 테스트 알림', '알림이 이렇게 표시돼요 😊');
+    setNotifTest(reason ?? '✅ 알림을 보냈어요! 방금 알림이 떴는지 확인해보세요.');
+  };
   const [fullName, setFullName] = useState(profile?.full_name || '');
   const [timezone, setTimezone] = useState(profile?.timezone || 'Asia/Seoul');
   const [language, setLanguage] = useState(profile?.language || 'ko');
@@ -199,6 +210,19 @@ export default function SettingsPage() {
               />
             </div>
           </label>
+          <div className="border-t border-surface-300" />
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-gray-200">알림 테스트</p>
+              <p className="text-xs text-gray-500">지금 알림이 잘 뜨는지 바로 확인해요</p>
+            </div>
+            <Button size="sm" variant="outline" className="shrink-0" onClick={handleTestNotif}>
+              <Bell size={14} /> 테스트 알림
+            </Button>
+          </div>
+          {notifTest && (
+            <p className={`text-xs ${notifTest.startsWith('✅') ? 'text-emerald-400' : 'text-amber-400'}`}>{notifTest}</p>
+          )}
         </CardContent>
       </Card>
 
