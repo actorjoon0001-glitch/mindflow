@@ -193,6 +193,14 @@ export interface CoupleMessage {
   created_at: string;
 }
 
+export interface CoupleMessageReaction {
+  message_id: string;
+  user_id: string;
+  couple_id: string;
+  emoji: string;
+  created_at: string;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -236,6 +244,11 @@ export interface Database {
         Row: CoupleMessage;
         Insert: Partial<CoupleMessage> & { couple_id: string; sender_id: string; content: string };
         Update: Partial<CoupleMessage>;
+      };
+      couple_message_reactions: {
+        Row: CoupleMessageReaction;
+        Insert: { message_id: string; user_id: string; couple_id: string; emoji: string };
+        Update: Partial<CoupleMessageReaction>;
       };
     };
     Functions: {

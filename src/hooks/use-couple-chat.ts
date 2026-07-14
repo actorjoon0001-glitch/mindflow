@@ -3,13 +3,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuthStore } from '@/stores/auth-store';
-import type { CoupleMessage } from '@/types';
+import type { CoupleMessage, CoupleMessageReaction } from '@/types';
+
+export type ReactionMap = Record<string, { user_id: string; emoji: string }[]>;
 
 export function useCoupleChat() {
   const [messages, setMessages] = useState<CoupleMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [partnerReadAt, setPartnerReadAt] = useState<string | null>(null);
+  const [reactions, setReactions] = useState<ReactionMap>({});
   const user = useAuthStore((s) => s.user);
   const couple = useAuthStore((s) => s.couple);
   const partner = useAuthStore((s) => s.partner);
@@ -55,11 +58,26 @@ export function useCoupleChat() {
     setPartnerReadAt(data?.last_read_at ?? null);
   }, [couple, partner]);
 
+  const fetchReactions = useCallback(async () => {
+    if (!couple) { setReactions({}); return; }
+    const supabase = createClient();
+    const { data } = await supabase
+      .from('couple_message_reactions')
+      .select('message_id, user_id, emoji')
+      .eq('couple_id', couple.id);
+    const map: ReactionMap = {};
+    (data || []).forEach((r) => {
+      (map[r.message_id] ||= []).push({ user_id: r.user_id, emoji: r.emoji });
+    });
+    setReactions(map);
+  }, [couple]);
+
   useEffect(() => {
     fetchMessages();
     fetchPartnerRead();
+    fetchReactions();
     markRead();
-  }, [fetchMessages, fetchPartnerRead, markRead]);
+  }, [fetchMessages, fetchPartnerRead, fetchReactions, markRead]);
 
   // 창을 다시 볼 때 읽음 처리
   useEffect(() => {
@@ -90,18 +108,31 @@ export function useCoupleChat() {
       )
       .on(
         'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'couple_messages' },
+        (payload) => {
+          const old = payload.old as { id?: string };
+          if (old?.id) setMessages((prev) => prev.filter((m) => m.id !== old.id));
+        },
+      )
+      .on(
+        'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'couple_members', filter: `couple_id=eq.${couple.id}` },
         (payload) => {
           const row = payload.new as { user_id: string; last_read_at: string };
           if (partner && row.user_id === partner.id) setPartnerReadAt(row.last_read_at);
         },
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'couple_message_reactions', filter: `couple_id=eq.${couple.id}` },
+        () => { fetchReactions(); },
+      )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [couple, partner, user, markRead]);
+  }, [couple, partner, user, markRead, fetchReactions]);
 
   const sendMessage = async (content: string) => {
     if (!couple || !user || !content.trim()) return;
@@ -151,5 +182,37 @@ export function useCoupleChat() {
     return null;
   };
 
-  return { messages, loading, sending, partnerReadAt, sendMessage, sendImage, fetchMessages };
+  const deleteMessage = async (id: string) => {
+    if (!user) return;
+    setMessages((prev) => prev.filter((m) => m.id !== id));
+    const supabase = createClient();
+    await supabase.from('couple_messages').delete().eq('id', id).eq('sender_id', user.id);
+  };
+
+  // 반응 토글: 같은 이모지면 제거, 다르면 교체(사용자당 메시지당 1개).
+  const react = async (messageId: string, emoji: string) => {
+    if (!couple || !user) return;
+    const supabase = createClient();
+    const mine = (reactions[messageId] || []).find((r) => r.user_id === user.id);
+
+    // 낙관적 업데이트
+    setReactions((prev) => {
+      const list = (prev[messageId] || []).filter((r) => r.user_id !== user.id);
+      if (!mine || mine.emoji !== emoji) list.push({ user_id: user.id, emoji });
+      return { ...prev, [messageId]: list };
+    });
+
+    if (mine && mine.emoji === emoji) {
+      await supabase.from('couple_message_reactions').delete()
+        .eq('message_id', messageId).eq('user_id', user.id);
+    } else {
+      await supabase.from('couple_message_reactions')
+        .upsert({ message_id: messageId, user_id: user.id, couple_id: couple.id, emoji });
+    }
+  };
+
+  return {
+    messages, loading, sending, partnerReadAt, reactions, myId: user?.id,
+    sendMessage, sendImage, deleteMessage, react, fetchMessages,
+  };
 }
