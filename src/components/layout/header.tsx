@@ -11,6 +11,7 @@ import { useSkin } from '@/stores/skin';
 
 const pageNames: Record<string, string> = {
   '/dashboard': '홈',
+  '/today': '오늘의 우리',
   '/calendar': '캘린더',
   '/map': '지도',
   '/chat': '채팅',
