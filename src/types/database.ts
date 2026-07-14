@@ -188,6 +188,7 @@ export interface CoupleMessage {
   couple_id: string;
   sender_id: string | null;
   content: string;
+  image_url: string | null;
   created_at: string;
 }
 
