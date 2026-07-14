@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, Heart, Loader2 } from 'lucide-react';
+import { Send, Heart, Loader2, ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 import { useCoupleChat } from '@/hooks/use-couple-chat';
@@ -19,13 +19,15 @@ function formatDay(dateStr: string) {
 }
 
 export default function ChatPage() {
-  const { messages, loading, sending, sendMessage } = useCoupleChat();
+  const { messages, loading, sending, sendMessage, sendImage } = useCoupleChat();
   const user = useAuthStore((s) => s.user);
   const partner = useAuthStore((s) => s.partner);
   const profile = useAuthStore((s) => s.profile);
   const discreet = useSkin((s) => s.discreet);
   const [input, setInput] = useState('');
+  const [imgError, setImgError] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -36,6 +38,15 @@ export default function ChatPage() {
     const msg = input;
     setInput('');
     await sendMessage(msg);
+  };
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // 같은 파일 재선택 허용
+    if (!file) return;
+    setImgError('');
+    const err = await sendImage(file);
+    if (err) setImgError(err);
   };
 
   let lastDay = '';
@@ -83,19 +94,32 @@ export default function ChatPage() {
                 )}
                 <div className={cn('flex gap-2 items-end', mine ? 'justify-end' : 'justify-start')}>
                   {!mine && <Avatar name={discreet ? '#' : (partner?.full_name || partner?.email || '💗')} size="sm" />}
-                  <div className={cn('flex flex-col min-w-0 max-w-[80%] sm:max-w-[70%]', mine ? 'items-end' : 'items-start')}>
-                    <div
-                      className={cn(
-                        'w-fit max-w-full rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-keep [overflow-wrap:anywhere]',
-                        mine
-                          ? discreet
-                            ? 'bg-brand-600 text-white rounded-br-md'
-                            : 'bg-gradient-to-br from-rose-500 to-pink-600 text-white rounded-br-md'
-                          : 'bg-surface-100 border border-surface-300 text-gray-200 rounded-bl-md'
-                      )}
-                    >
-                      {msg.content}
-                    </div>
+                  <div className={cn('flex flex-col min-w-0 max-w-[80%] sm:max-w-[70%] gap-1', mine ? 'items-end' : 'items-start')}>
+                    {msg.image_url && (
+                      <a href={msg.image_url} target="_blank" rel="noopener noreferrer" className="block">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={msg.image_url}
+                          alt="사진"
+                          loading="lazy"
+                          className="rounded-2xl max-w-[220px] max-h-[300px] object-cover border border-surface-300"
+                        />
+                      </a>
+                    )}
+                    {msg.content && (
+                      <div
+                        className={cn(
+                          'w-fit max-w-full rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-keep [overflow-wrap:anywhere]',
+                          mine
+                            ? discreet
+                              ? 'bg-brand-600 text-white rounded-br-md'
+                              : 'bg-gradient-to-br from-rose-500 to-pink-600 text-white rounded-br-md'
+                            : 'bg-surface-100 border border-surface-300 text-gray-200 rounded-bl-md'
+                        )}
+                      >
+                        {msg.content}
+                      </div>
+                    )}
                     <span className="text-[10px] text-gray-600 mt-0.5 px-1">
                       {new Date(msg.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
                     </span>
@@ -111,7 +135,19 @@ export default function ChatPage() {
 
       {/* Input */}
       <div className="border-t border-surface-300 pt-4">
+        {imgError && <p className="text-xs text-red-400 mb-2 px-1">{imgError}</p>}
         <div className="flex gap-2 items-end">
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+          <Button
+            onClick={() => fileRef.current?.click()}
+            disabled={sending}
+            variant="secondary"
+            size="icon"
+            className="h-11 w-11 rounded-xl shrink-0"
+            title="사진 첨부"
+          >
+            <ImageIcon size={18} />
+          </Button>
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -124,7 +160,7 @@ export default function ChatPage() {
             style={{ minHeight: '44px' }}
           />
           <Button onClick={handleSend} disabled={!input.trim() || sending} size="icon" className="h-11 w-11 rounded-xl shrink-0">
-            <Send size={18} />
+            {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
           </Button>
         </div>
       </div>
