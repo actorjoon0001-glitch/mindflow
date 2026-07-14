@@ -52,6 +52,7 @@ export default function ChatPage() {
   const endRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const initialScrolled = useRef(false);
 
   const REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🥰'];
 
@@ -64,7 +65,10 @@ export default function ChatPage() {
   };
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messages.length === 0) return;
+    // 첫 로드: 애니메이션 없이 즉시 맨 아래(최신)로. 이후 새 메시지: 부드럽게.
+    endRef.current?.scrollIntoView({ behavior: initialScrolled.current ? 'smooth' : 'auto', block: 'end' });
+    initialScrolled.current = true;
   }, [messages]);
 
   // 반응/삭제 메뉴 열림 상태에서 다른 곳 탭하면 닫기
