@@ -201,6 +201,29 @@ export interface CoupleMessageReaction {
   created_at: string;
 }
 
+export interface CoupleMilestone {
+  id: string;
+  couple_id: string;
+  created_by: string | null;
+  title: string;
+  date: string; // YYYY-MM-DD
+  emoji: string;
+  created_at: string;
+}
+
+export type BucketCategory = 'place' | 'food' | 'activity' | 'travel' | 'etc';
+
+export interface CoupleBucketItem {
+  id: string;
+  couple_id: string;
+  created_by: string | null;
+  title: string;
+  category: BucketCategory;
+  done: boolean;
+  done_at: string | null;
+  created_at: string;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -249,6 +272,16 @@ export interface Database {
         Row: CoupleMessageReaction;
         Insert: { message_id: string; user_id: string; couple_id: string; emoji: string };
         Update: Partial<CoupleMessageReaction>;
+      };
+      couple_milestones: {
+        Row: CoupleMilestone;
+        Insert: Partial<CoupleMilestone> & { couple_id: string; title: string; date: string };
+        Update: Partial<CoupleMilestone>;
+      };
+      couple_bucket: {
+        Row: CoupleBucketItem;
+        Insert: Partial<CoupleBucketItem> & { couple_id: string; title: string };
+        Update: Partial<CoupleBucketItem>;
       };
     };
     Functions: {
