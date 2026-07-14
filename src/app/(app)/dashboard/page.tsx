@@ -4,11 +4,12 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   Calendar, MapPin, MessageCircle, Sparkles, Heart, ArrowRight, Clock,
-  CheckSquare, CalendarClock,
+  CheckSquare, CalendarClock, HandHeart, Dices, Loader2, X,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DailyLoveQuote } from '@/components/couple/daily-love-quote';
+import { MilestoneCard } from '@/components/couple/milestone-card';
 import { InviteCode } from '@/components/couple/couple-gate';
 import { useAuthStore } from '@/stores/auth-store';
 import { useSkin } from '@/stores/skin';
@@ -21,10 +22,41 @@ export default function DashboardPage() {
   const profile = useAuthStore((s) => s.profile);
   const partner = useAuthStore((s) => s.partner);
   const couple = useAuthStore((s) => s.couple);
+  const user = useAuthStore((s) => s.user);
   const discreet = useSkin((s) => s.discreet);
   const [placeCount, setPlaceCount] = useState(0);
   const [upcomingEvents, setUpcomingEvents] = useState<CoupleEvent[]>([]);
   const [recentPlaces, setRecentPlaces] = useState<CouplePlace[]>([]);
+  const [pokeSent, setPokeSent] = useState(false);
+  const [rouletteLoading, setRouletteLoading] = useState(false);
+  const [rouletteResult, setRouletteResult] = useState<string | null>(null);
+
+  const sendPoke = async () => {
+    if (!couple || !user || pokeSent) return;
+    const supabase = createClient();
+    await supabase.from('couple_messages').insert({
+      couple_id: couple.id, sender_id: user.id, content: '💗 콕! 보고 싶어요',
+    });
+    setPokeSent(true);
+    setTimeout(() => setPokeSent(false), 3000);
+  };
+
+  const spinRoulette = async () => {
+    setRouletteLoading(true);
+    setRouletteResult(null);
+    try {
+      const res = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: '오늘 즐길 만한 데이트 아이디어를 딱 하나만 랜덤으로 짧고 재밌게 추천해줘. 캘린더에 일정은 절대 추가하지 말고, 2~3문장으로만.' }),
+      });
+      const data = await res.json();
+      setRouletteResult(data.content || '아이디어를 불러오지 못했어요. 다시 시도해주세요!');
+    } catch {
+      setRouletteResult('아이디어를 불러오지 못했어요. 다시 시도해주세요!');
+    }
+    setRouletteLoading(false);
+  };
 
   const anniversary = couple?.anniversary_date;
   const dayCount = anniversary ? getDayCount(anniversary) : 0;
@@ -124,11 +156,34 @@ export default function DashboardPage() {
 
       {/* Quick actions */}
       <div className="flex gap-2 overflow-x-auto pb-1">
+        {!discreet && partner && (
+          <Button variant="outline" size="sm" className="whitespace-nowrap" onClick={sendPoke} disabled={pokeSent}>
+            <HandHeart size={14} className="text-rose-400" /> {pokeSent ? '콕! 보냈어요' : '콕 찌르기'}
+          </Button>
+        )}
+        <Button variant="outline" size="sm" className="whitespace-nowrap" onClick={spinRoulette} disabled={rouletteLoading}>
+          {rouletteLoading ? <Loader2 size={14} className="animate-spin" /> : <Dices size={14} className="text-amber-400" />} 데이트 룰렛
+        </Button>
         <Link href="/calendar"><Button variant="outline" size="sm" className="whitespace-nowrap"><Calendar size={14} /> 일정 추가</Button></Link>
         <Link href="/map"><Button variant="outline" size="sm" className="whitespace-nowrap"><MapPin size={14} /> 장소 기록</Button></Link>
-        <Link href="/chat"><Button variant="outline" size="sm" className="whitespace-nowrap"><MessageCircle size={14} /> 채팅</Button></Link>
-        <Link href="/assistant"><Button variant="outline" size="sm" className="whitespace-nowrap"><Sparkles size={14} /> 데이트 추천</Button></Link>
+        <Link href="/bucket"><Button variant="outline" size="sm" className="whitespace-nowrap"><CheckSquare size={14} /> 버킷리스트</Button></Link>
       </div>
+
+      {/* Date roulette result */}
+      {rouletteResult && (
+        <Card className="bg-gradient-to-br from-amber-950/30 to-surface-50 border-amber-900/40">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-2">
+              <Dices size={18} className="text-amber-400 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-xs font-medium text-amber-300 mb-1">오늘의 데이트 룰렛 🎲</p>
+                <p className="text-sm text-gray-200 leading-relaxed whitespace-pre-wrap">{rouletteResult}</p>
+              </div>
+            </div>
+            <button onClick={() => setRouletteResult(null)} className="text-gray-600 hover:text-gray-400 shrink-0"><X size={16} /></button>
+          </div>
+        </Card>
+      )}
 
       <div className="grid lg:grid-cols-3 gap-4 lg:gap-6">
         {/* Upcoming events */}
@@ -170,6 +225,9 @@ export default function DashboardPage() {
 
         {/* Sidebar column */}
         <div className="space-y-4">
+          {/* Our milestones */}
+          {!discreet && <MilestoneCard />}
+
           {/* Recent places */}
           <Card>
             <CardHeader>
