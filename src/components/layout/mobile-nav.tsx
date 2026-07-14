@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Heart, Calendar, Map, MessageCircle, Sparkles } from 'lucide-react';
+import { Heart, Calendar, Map, MessageCircle, Sparkles, LayoutGrid } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useSkin } from '@/stores/skin';
 
 const items = [
   { label: '홈', href: '/dashboard', Icon: Heart },
@@ -15,11 +16,13 @@ const items = [
 
 export function MobileNav() {
   const pathname = usePathname();
+  const discreet = useSkin((s) => s.discreet);
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-surface border-t border-surface-300 safe-area-bottom">
       <div className="flex items-center justify-around h-16 px-2">
-        {items.map(({ label, href, Icon }) => {
+        {items.map(({ label, href, Icon: BaseIcon }) => {
+          const Icon = discreet && BaseIcon === Heart ? LayoutGrid : BaseIcon;
           const isActive = pathname.startsWith(href);
           return (
             <Link

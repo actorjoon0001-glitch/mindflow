@@ -35,6 +35,19 @@ export function Header({ onMenuToggle }: HeaderProps) {
   // 스킨/잠금 상태를 이 기기 저장값에서 복원.
   useEffect(() => { hydrateSkin(); }, [hydrateSkin]);
 
+  // 디스크릿 모드: 상단 테마색(PWA 타이틀바)·창 제목을 무채색/중립으로.
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    let meta = document.querySelector('meta[name="theme-color"]');
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.setAttribute('name', 'theme-color');
+      document.head.appendChild(meta);
+    }
+    meta.setAttribute('content', discreet ? '#0f0f14' : '#ec4899');
+    document.title = discreet ? 'Workspace' : '우리 - 둘만의 캘린더 · 지도 · 채팅';
+  }, [discreet]);
+
   const handleBellClick = async () => {
     if (permission !== 'granted') {
       await enableNotifications();
