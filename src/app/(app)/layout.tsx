@@ -9,6 +9,7 @@ import { MobileNav } from '@/components/layout/mobile-nav';
 import { NotificationBanner } from '@/components/notifications/notification-banner';
 import { BossKey } from '@/components/boss/boss-key';
 import { AppLock } from '@/components/lock/app-lock';
+import { ChatNotifier } from '@/components/chat/chat-notifier';
 import { cn } from '@/lib/utils';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -20,6 +21,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* 위장(보스키) · 화면 잠금 오버레이 — 어느 화면에서든 최상단에 표시 */}
       <BossKey />
       <AppLock />
+      <ChatNotifier />
       <CoupleGate>
       <div className="min-h-screen bg-surface">
         {/* Desktop sidebar */}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Save, User, Bell, Globe, Brain, LogOut, Heart, Lock, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useAppLock } from '@/stores/app-lock';
 import { useBossMode } from '@/stores/boss-mode';
 import { useSkin } from '@/stores/skin';
+import { useNotifPrefs } from '@/stores/notif-prefs';
 import { getDayCount } from '@/lib/couple-utils';
 
 export default function SettingsPage() {
@@ -18,6 +19,9 @@ export default function SettingsPage() {
   const { hasPin, openSetup, lock, clearPin } = useAppLock();
   const activateBoss = useBossMode((s) => s.activate);
   const { discreet, toggle: toggleSkin } = useSkin();
+  const { chatPreview, toggle: toggleChatPreview, hydrate: hydrateNotifPrefs } = useNotifPrefs();
+
+  useEffect(() => { hydrateNotifPrefs(); }, [hydrateNotifPrefs]);
   const [fullName, setFullName] = useState(profile?.full_name || '');
   const [timezone, setTimezone] = useState(profile?.timezone || 'Asia/Seoul');
   const [language, setLanguage] = useState(profile?.language || 'ko');
@@ -155,7 +159,7 @@ export default function SettingsPage() {
             <CardTitle>알림</CardTitle>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <label className="flex items-center justify-between cursor-pointer">
             <div>
               <p className="text-sm font-medium text-gray-200">알림 활성화</p>
@@ -170,6 +174,27 @@ export default function SettingsPage() {
               <div
                 className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${
                   notification ? 'translate-x-[22px]' : 'translate-x-0.5'
+                }`}
+              />
+            </div>
+          </label>
+          <div className="border-t border-surface-300" />
+          <label className="flex items-center justify-between cursor-pointer">
+            <div className="pr-3">
+              <p className="text-sm font-medium text-gray-200">채팅 알림 내용 미리보기</p>
+              <p className="text-xs text-gray-500">
+                {chatPreview ? '알림에 보낸 사람·메시지 내용이 보여요' : '내용을 가리고 "새 메시지"만 표시해요 (권장)'}
+              </p>
+            </div>
+            <div
+              className={`w-11 h-6 rounded-full transition-colors cursor-pointer relative shrink-0 ${
+                chatPreview ? 'bg-brand-600' : 'bg-surface-400'
+              }`}
+              onClick={toggleChatPreview}
+            >
+              <div
+                className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${
+                  chatPreview ? 'translate-x-[22px]' : 'translate-x-0.5'
                 }`}
               />
             </div>
