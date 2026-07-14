@@ -3,6 +3,7 @@ export const APP_DESCRIPTION = '둘만의 캘린더 · 지도 · 채팅';
 
 export const NAV_ITEMS = [
   { label: '홈', href: '/dashboard', icon: 'Heart' },
+  { label: '오늘의 우리', href: '/today', icon: 'Sun' },
   { label: '캘린더', href: '/calendar', icon: 'Calendar' },
   { label: '지도', href: '/map', icon: 'Map' },
   { label: '채팅', href: '/chat', icon: 'MessageCircle' },

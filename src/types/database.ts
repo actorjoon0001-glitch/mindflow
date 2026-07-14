@@ -211,6 +211,23 @@ export interface CoupleMilestone {
   created_at: string;
 }
 
+export interface CoupleQuestionAnswer {
+  couple_id: string;
+  question_date: string;
+  user_id: string;
+  answer: string;
+  created_at: string;
+}
+
+export interface CoupleMood {
+  couple_id: string;
+  user_id: string;
+  date: string;
+  emoji: string;
+  note: string | null;
+  updated_at: string;
+}
+
 export type BucketCategory = 'place' | 'food' | 'activity' | 'travel' | 'etc';
 
 export interface CoupleBucketItem {
@@ -282,6 +299,16 @@ export interface Database {
         Row: CoupleBucketItem;
         Insert: Partial<CoupleBucketItem> & { couple_id: string; title: string };
         Update: Partial<CoupleBucketItem>;
+      };
+      couple_question_answers: {
+        Row: CoupleQuestionAnswer;
+        Insert: { couple_id: string; question_date: string; user_id: string; answer: string };
+        Update: Partial<CoupleQuestionAnswer>;
+      };
+      couple_moods: {
+        Row: CoupleMood;
+        Insert: { couple_id: string; user_id: string; date: string; emoji: string; note?: string | null };
+        Update: Partial<CoupleMood>;
       };
     };
     Functions: {
