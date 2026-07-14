@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Heart, Loader2, ImageIcon, Trash2 } from 'lucide-react';
+import { Send, Heart, Loader2, ImageIcon, Trash2, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 import { useCoupleChat } from '@/hooks/use-couple-chat';
@@ -49,6 +49,8 @@ export default function ChatPage() {
   const [imgError, setImgError] = useState('');
   const [dragOver, setDragOver] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQ, setSearchQ] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -127,6 +129,8 @@ export default function ChatPage() {
   };
 
   let lastDay = '';
+  const q = searchQ.trim().toLowerCase();
+  const shownMessages = q ? messages.filter((m) => m.content && m.content.toLowerCase().includes(q)) : messages;
 
   return (
     <div
@@ -143,13 +147,33 @@ export default function ChatPage() {
       {/* Header */}
       <div className="flex items-center gap-3 mb-4">
         <Avatar name={discreet ? '#' : (partner?.full_name || partner?.email || '💗')} size="md" />
-        <div>
-          <h2 className="text-base font-semibold text-gray-100">
+        <div className="min-w-0">
+          <h2 className="text-base font-semibold text-gray-100 truncate">
             {discreet ? '메시지' : (partner?.full_name || partner?.email || '상대를 기다리는 중')}
           </h2>
           {!discreet && <p className="text-xs text-gray-500">둘만의 대화 💬</p>}
         </div>
+        <button
+          onClick={() => { setSearchOpen((v) => !v); setSearchQ(''); }}
+          className="ml-auto p-2 rounded-lg text-gray-400 hover:text-gray-200 hover:bg-surface-200 transition-colors shrink-0"
+          title="대화 검색"
+        >
+          {searchOpen ? <X size={18} /> : <Search size={18} />}
+        </button>
       </div>
+
+      {searchOpen && (
+        <div className="mb-3 relative">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+          <input
+            autoFocus
+            value={searchQ}
+            onChange={(e) => setSearchQ(e.target.value)}
+            placeholder="대화 내용 검색"
+            className="w-full pl-9 pr-4 py-2 rounded-lg bg-surface-100 border border-surface-300 text-sm text-gray-200 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-500"
+          />
+        </div>
+      )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto space-y-1 pb-4">
@@ -166,8 +190,13 @@ export default function ChatPage() {
               {discreet ? <>메시지를 시작해보세요.<br />첫 메시지를 입력해 보세요.</> : <>둘만의 채팅을 시작해보세요.<br />첫 메시지를 보내볼까요? 💕</>}
             </p>
           </div>
+        ) : q && shownMessages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full py-12 text-center">
+            <Search size={28} className="text-gray-600 mb-2" />
+            <p className="text-sm text-gray-500">&quot;{searchQ}&quot; 검색 결과가 없어요</p>
+          </div>
         ) : (
-          messages.map((msg) => {
+          shownMessages.map((msg) => {
             const mine = msg.sender_id === user?.id;
             const day = formatDay(msg.created_at);
             const showDay = day !== lastDay;
