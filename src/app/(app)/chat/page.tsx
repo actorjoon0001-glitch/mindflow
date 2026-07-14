@@ -9,6 +9,26 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useSkin } from '@/stores/skin';
 import { cn } from '@/lib/utils';
 
+// 메시지 안의 URL을 클릭 가능한 링크로 변환.
+function linkify(text: string) {
+  const parts = text.split(/(https?:\/\/[^\s]+)/g);
+  return parts.map((part, i) =>
+    /^https?:\/\//.test(part) ? (
+      <a
+        key={i}
+        href={part}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline underline-offset-2 break-all hover:opacity-80"
+      >
+        {part}
+      </a>
+    ) : (
+      part
+    ),
+  );
+}
+
 function formatDay(dateStr: string) {
   const d = new Date(dateStr);
   const today = new Date();
@@ -159,7 +179,7 @@ export default function ChatPage() {
                             : 'bg-surface-100 border border-surface-300 text-gray-200 rounded-bl-md'
                         )}
                       >
-                        {msg.content}
+                        {linkify(msg.content)}
                       </div>
                     )}
                     <span className="text-[10px] text-gray-600 mt-0.5 px-1">
