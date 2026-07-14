@@ -14,6 +14,7 @@ const pageNames: Record<string, string> = {
   '/calendar': '캘린더',
   '/map': '지도',
   '/chat': '채팅',
+  '/bucket': '버킷리스트',
   '/assistant': 'AI 추천',
   '/notes': '메모',
   '/tasks': '할 일',

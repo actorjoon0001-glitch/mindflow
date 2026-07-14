@@ -6,6 +6,7 @@ export const NAV_ITEMS = [
   { label: '캘린더', href: '/calendar', icon: 'Calendar' },
   { label: '지도', href: '/map', icon: 'Map' },
   { label: '채팅', href: '/chat', icon: 'MessageCircle' },
+  { label: '버킷리스트', href: '/bucket', icon: 'ListChecks' },
   { label: 'AI 추천', href: '/assistant', icon: 'Sparkles' },
   { label: '메모', href: '/notes', icon: 'FileText' },
   { label: '할 일', href: '/tasks', icon: 'CheckSquare' },
@@ -36,6 +37,16 @@ export const COUPLE_PLACE_CATEGORIES: Record<string, { label: string; emoji: str
   travel: { label: '여행', emoji: '✈️', color: '#06b6d4' },
   etc: { label: '기타', emoji: '📍', color: '#ec4899' },
 };
+
+export const BUCKET_CATEGORIES: Record<string, { label: string; emoji: string }> = {
+  place: { label: '가보고 싶은 곳', emoji: '📍' },
+  food: { label: '먹고 싶은 것', emoji: '🍽️' },
+  activity: { label: '같이 하고 싶은 것', emoji: '🎯' },
+  travel: { label: '여행', emoji: '✈️' },
+  etc: { label: '기타', emoji: '💭' },
+};
+
+export const MILESTONE_EMOJIS = ['💗', '🎉', '✈️', '🎬', '🍰', '🌸', '🏠', '💍', '🐣', '⭐'];
 
 export const MILESTONE_COLORS: Record<string, string> = {
   start: 'bg-rose-500/20 text-rose-300',
