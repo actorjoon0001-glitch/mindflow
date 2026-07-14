@@ -39,7 +39,7 @@ function formatDay(dateStr: string) {
 }
 
 export default function ChatPage() {
-  const { messages, loading, sending, sendMessage, sendImage } = useCoupleChat();
+  const { messages, loading, sending, partnerReadAt, sendMessage, sendImage } = useCoupleChat();
   const user = useAuthStore((s) => s.user);
   const partner = useAuthStore((s) => s.partner);
   const profile = useAuthStore((s) => s.profile);
@@ -182,9 +182,14 @@ export default function ChatPage() {
                         {linkify(msg.content)}
                       </div>
                     )}
-                    <span className="text-[10px] text-gray-600 mt-0.5 px-1">
-                      {new Date(msg.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
+                    <div className="flex items-center gap-1 mt-0.5 px-1">
+                      {mine && partner && (!partnerReadAt || new Date(msg.created_at) > new Date(partnerReadAt)) && (
+                        <span className="text-[10px] text-amber-400 font-semibold leading-none">1</span>
+                      )}
+                      <span className="text-[10px] text-gray-600">
+                        {new Date(msg.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
                   </div>
                   {mine && <Avatar name={profile?.full_name || profile?.email || '나'} size="sm" />}
                 </div>
