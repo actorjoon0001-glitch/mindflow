@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Heart, Loader2, ImageIcon } from 'lucide-react';
+import { Send, Heart, Loader2, ImageIcon, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 import { useCoupleChat } from '@/hooks/use-couple-chat';
@@ -40,7 +40,7 @@ function formatDay(dateStr: string) {
 }
 
 export default function ChatPage() {
-  const { messages, loading, sending, partnerReadAt, sendMessage, sendImage } = useCoupleChat();
+  const { messages, loading, sending, partnerReadAt, reactions, myId, sendMessage, sendImage, deleteMessage, react } = useCoupleChat();
   const user = useAuthStore((s) => s.user);
   const partner = useAuthStore((s) => s.partner);
   const profile = useAuthStore((s) => s.profile);
@@ -48,12 +48,32 @@ export default function ChatPage() {
   const [input, setInput] = useState('');
   const [imgError, setImgError] = useState('');
   const [dragOver, setDragOver] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🥰'];
+
+  // 길게 누르기(모바일) / 우클릭(데스크톱)으로 반응·삭제 메뉴 열기
+  const startPress = (id: string) => {
+    longPressRef.current = setTimeout(() => setActiveId(id), 450);
+  };
+  const cancelPress = () => {
+    if (longPressRef.current) { clearTimeout(longPressRef.current); longPressRef.current = null; }
+  };
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // 반응/삭제 메뉴 열림 상태에서 다른 곳 탭하면 닫기
+  useEffect(() => {
+    if (!activeId) return;
+    const close = () => setActiveId(null);
+    const t = setTimeout(() => document.addEventListener('click', close), 0);
+    return () => { clearTimeout(t); document.removeEventListener('click', close); };
+  }, [activeId]);
 
   const handleSend = async () => {
     if (!input.trim() || sending) return;
@@ -158,31 +178,96 @@ export default function ChatPage() {
                 <div className={cn('flex gap-2 items-end', mine ? 'justify-end' : 'justify-start')}>
                   {!mine && <Avatar name={discreet ? '#' : (partner?.full_name || partner?.email || '💗')} size="sm" />}
                   <div className={cn('flex flex-col min-w-0 max-w-[80%] sm:max-w-[70%] gap-1', mine ? 'items-end' : 'items-start')}>
-                    {msg.image_url && (
-                      <a href={msg.image_url} target="_blank" rel="noopener noreferrer" className="block">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={msg.image_url}
-                          alt="사진"
-                          loading="lazy"
-                          className="rounded-2xl max-w-[220px] max-h-[300px] object-cover border border-surface-300"
-                        />
-                      </a>
-                    )}
-                    {msg.content && (
-                      <div
-                        className={cn(
-                          'w-fit max-w-full rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-keep [overflow-wrap:anywhere]',
-                          mine
-                            ? discreet
-                              ? 'bg-brand-600 text-white rounded-br-md'
-                              : 'bg-gradient-to-br from-rose-500 to-pink-600 text-white rounded-br-md'
-                            : 'bg-surface-100 border border-surface-300 text-gray-200 rounded-bl-md'
-                        )}
-                      >
-                        {linkify(msg.content)}
-                      </div>
-                    )}
+                    <div
+                      className="relative"
+                      onContextMenu={(e) => { e.preventDefault(); setActiveId(msg.id); }}
+                      onTouchStart={() => startPress(msg.id)}
+                      onTouchEnd={cancelPress}
+                      onTouchMove={cancelPress}
+                    >
+                      {activeId === msg.id && (
+                        <div
+                          onClick={(e) => e.stopPropagation()}
+                          className={cn(
+                            'absolute z-30 bottom-full mb-1 flex items-center gap-0.5 rounded-full bg-surface-50 border border-surface-300 shadow-xl px-1.5 py-1',
+                            mine ? 'right-0' : 'left-0',
+                          )}
+                        >
+                          {REACTIONS.map((emoji) => (
+                            <button
+                              key={emoji}
+                              onClick={() => { react(msg.id, emoji); setActiveId(null); }}
+                              className="h-8 w-8 rounded-full hover:bg-surface-200 text-lg flex items-center justify-center"
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                          {mine && (
+                            <button
+                              onClick={() => { deleteMessage(msg.id); setActiveId(null); }}
+                              className="h-8 w-8 rounded-full hover:bg-red-500/20 text-red-400 flex items-center justify-center"
+                              title="삭제"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          )}
+                        </div>
+                      )}
+                      {msg.image_url && (
+                        <a href={msg.image_url} target="_blank" rel="noopener noreferrer" className="block">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={msg.image_url}
+                            alt="사진"
+                            loading="lazy"
+                            className="rounded-2xl max-w-[220px] max-h-[300px] object-cover border border-surface-300"
+                          />
+                        </a>
+                      )}
+                      {msg.content && (
+                        <div
+                          className={cn(
+                            'w-fit max-w-full rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-keep [overflow-wrap:anywhere]',
+                            mine
+                              ? discreet
+                                ? 'bg-brand-600 text-white rounded-br-md'
+                                : 'bg-gradient-to-br from-rose-500 to-pink-600 text-white rounded-br-md'
+                              : 'bg-surface-100 border border-surface-300 text-gray-200 rounded-bl-md'
+                          )}
+                        >
+                          {linkify(msg.content)}
+                        </div>
+                      )}
+                    </div>
+
+                    {(() => {
+                      const list = reactions[msg.id] || [];
+                      if (list.length === 0) return null;
+                      const grouped = list.reduce((acc, r) => {
+                        (acc[r.emoji] ||= []).push(r.user_id);
+                        return acc;
+                      }, {} as Record<string, string[]>);
+                      return (
+                        <div className="flex flex-wrap gap-1">
+                          {Object.entries(grouped).map(([emoji, users]) => (
+                            <button
+                              key={emoji}
+                              onClick={() => react(msg.id, emoji)}
+                              className={cn(
+                                'flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-xs border transition-colors',
+                                myId && users.includes(myId)
+                                  ? 'bg-brand-600/20 border-brand-500 text-brand-200'
+                                  : 'bg-surface-100 border-surface-300 text-gray-300',
+                              )}
+                            >
+                              <span>{emoji}</span>
+                              {users.length > 1 && <span className="text-[10px]">{users.length}</span>}
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })()}
+
                     <div className="flex items-center gap-1 mt-0.5 px-1">
                       {mine && partner && (!partnerReadAt || new Date(msg.created_at) > new Date(partnerReadAt)) && (
                         <span className="text-[10px] text-amber-400 font-semibold leading-none">1</span>
