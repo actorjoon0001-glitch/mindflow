@@ -147,6 +147,7 @@ export interface Couple {
 export interface CoupleMember {
   couple_id: string;
   user_id: string;
+  last_read_at: string;
   created_at: string;
 }
 
