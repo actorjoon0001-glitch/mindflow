@@ -44,12 +44,12 @@ export default function ChatPage() {
     <div className="max-w-2xl mx-auto h-[calc(100vh-10rem)] lg:h-[calc(100vh-7rem)] flex flex-col animate-fade-in">
       {/* Header */}
       <div className="flex items-center gap-3 mb-4">
-        <Avatar name={partner?.full_name || partner?.email || '💗'} size="md" />
+        <Avatar name={discreet ? '#' : (partner?.full_name || partner?.email || '💗')} size="md" />
         <div>
           <h2 className="text-base font-semibold text-gray-100">
-            {partner?.full_name || partner?.email || '상대를 기다리는 중'}
+            {discreet ? '메시지' : (partner?.full_name || partner?.email || '상대를 기다리는 중')}
           </h2>
-          <p className="text-xs text-gray-500">{discreet ? '메시지' : '둘만의 대화 💬'}</p>
+          {!discreet && <p className="text-xs text-gray-500">둘만의 대화 💬</p>}
         </div>
       </div>
 
@@ -82,7 +82,7 @@ export default function ChatPage() {
                   </div>
                 )}
                 <div className={cn('flex gap-2 items-end', mine ? 'justify-end' : 'justify-start')}>
-                  {!mine && <Avatar name={partner?.full_name || partner?.email || '💗'} size="sm" />}
+                  {!mine && <Avatar name={discreet ? '#' : (partner?.full_name || partner?.email || '💗')} size="sm" />}
                   <div className={cn('flex flex-col min-w-0 max-w-[80%] sm:max-w-[70%]', mine ? 'items-end' : 'items-start')}>
                     <div
                       className={cn(
