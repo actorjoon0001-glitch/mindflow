@@ -7,6 +7,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { useCoupleChat } from '@/hooks/use-couple-chat';
 import { useAuthStore } from '@/stores/auth-store';
 import { useSkin } from '@/stores/skin';
+import { EmojiPicker } from '@/components/chat/emoji-picker';
 import { cn } from '@/lib/utils';
 
 // 메시지 안의 URL을 클릭 가능한 링크로 변환.
@@ -205,6 +206,7 @@ export default function ChatPage() {
         {imgError && <p className="text-xs text-red-400 mb-2 px-1">{imgError}</p>}
         <div className="flex gap-2 items-end">
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+          <EmojiPicker onPick={(emoji) => setInput((prev) => prev + emoji)} />
           <Button
             onClick={() => fileRef.current?.click()}
             disabled={sending}
