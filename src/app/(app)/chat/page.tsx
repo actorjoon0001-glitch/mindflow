@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, Heart, Loader2, ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
@@ -26,6 +26,7 @@ export default function ChatPage() {
   const discreet = useSkin((s) => s.discreet);
   const [input, setInput] = useState('');
   const [imgError, setImgError] = useState('');
+  const [dragOver, setDragOver] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -40,19 +41,60 @@ export default function ChatPage() {
     await sendMessage(msg);
   };
 
-  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = ''; // 같은 파일 재선택 허용
-    if (!file) return;
+  const uploadImage = useCallback(async (file: File) => {
     setImgError('');
     const err = await sendImage(file);
     if (err) setImgError(err);
+  }, [sendImage]);
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // 같은 파일 재선택 허용
+    if (file) await uploadImage(file);
+  };
+
+  // 붙여넣기(Ctrl+V)로 캡처 이미지 바로 전송 — 화면 어디서든 동작.
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) {
+            e.preventDefault();
+            uploadImage(file);
+          }
+          return;
+        }
+      }
+    };
+    document.addEventListener('paste', onPaste);
+    return () => document.removeEventListener('paste', onPaste);
+  }, [uploadImage]);
+
+  // 드래그&드롭으로도 이미지 전송.
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = Array.from(e.dataTransfer.files).find((f) => f.type.startsWith('image/'));
+    if (file) uploadImage(file);
   };
 
   let lastDay = '';
 
   return (
-    <div className="max-w-2xl mx-auto h-[calc(100vh-10rem)] lg:h-[calc(100vh-7rem)] flex flex-col animate-fade-in">
+    <div
+      className="relative max-w-2xl mx-auto h-[calc(100vh-10rem)] lg:h-[calc(100vh-7rem)] flex flex-col animate-fade-in"
+      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+      onDragLeave={(e) => { if (e.currentTarget === e.target) setDragOver(false); }}
+      onDrop={handleDrop}
+    >
+      {dragOver && (
+        <div className="absolute inset-0 z-20 rounded-2xl border-2 border-dashed border-brand-500 bg-brand-500/10 flex items-center justify-center pointer-events-none">
+          <span className="text-sm font-medium text-brand-300">여기에 이미지를 놓으면 전송돼요</span>
+        </div>
+      )}
       {/* Header */}
       <div className="flex items-center gap-3 mb-4">
         <Avatar name={discreet ? '#' : (partner?.full_name || partner?.email || '💗')} size="md" />
@@ -154,7 +196,7 @@ export default function ChatPage() {
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
             }}
-            placeholder="메시지 보내기"
+            placeholder="메시지 보내기 (사진은 Ctrl+V 붙여넣기)"
             rows={1}
             className="flex-1 bg-surface-100 border border-surface-300 rounded-xl px-4 py-3 text-sm text-gray-200 placeholder:text-gray-600 resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 max-h-32"
             style={{ minHeight: '44px' }}
