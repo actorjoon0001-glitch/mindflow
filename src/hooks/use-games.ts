@@ -36,6 +36,16 @@ export function useBalanceGame() {
     return () => { supabase.removeChannel(ch); };
   }, [couple, fetchAnswers]);
 
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchAnswers(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', fetchAnswers);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', fetchAnswers);
+    };
+  }, [fetchAnswers]);
+
   const submit = async (questionId: number, choice: string) => {
     if (!couple || !user) return;
     const supabase = createClient();
@@ -75,12 +85,24 @@ export function useCoupleQuiz() {
     return () => { supabase.removeChannel(ch); };
   }, [couple, fetchAnswers]);
 
-  const submit = async (questionId: number, answer: string, guess: string) => {
-    if (!couple || !user) return;
+  // 실시간이 안 오는 경우(모바일 백그라운드 등) 대비: 창 복귀 시 새로고침.
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchAnswers(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', fetchAnswers);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', fetchAnswers);
+    };
+  }, [fetchAnswers]);
+
+  const submit = async (questionId: number, answer: string, guess: string): Promise<string | null> => {
+    if (!couple || !user) return '로그인이 필요해요.';
     const supabase = createClient();
-    await supabase.from('couple_quiz_answers').upsert({ couple_id: couple.id, question_id: questionId, user_id: user.id, answer, guess });
-    fetchAnswers();
+    const { error } = await supabase.from('couple_quiz_answers').upsert({ couple_id: couple.id, question_id: questionId, user_id: user.id, answer, guess });
+    await fetchAnswers();
+    return error ? (error.message || '저장에 실패했어요.') : null;
   };
 
-  return { answers, submit };
+  return { answers, submit, refresh: fetchAnswers };
 }

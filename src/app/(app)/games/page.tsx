@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Scale, Brain, Check, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { ChevronLeft, ChevronRight, Scale, Brain, Check, X, RotateCw } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/auth-store';
@@ -105,8 +105,13 @@ function BalanceGame() {
 function CoupleQuiz() {
   const user = useAuthStore((s) => s.user);
   const partner = useAuthStore((s) => s.partner);
-  const { answers, submit } = useCoupleQuiz();
+  const { answers, submit, refresh } = useCoupleQuiz();
+  // 마지막으로 보던 문항 번호를 기억 → 새로고침해도 1번으로 안 돌아감.
   const [i, setI] = useState(0);
+  useEffect(() => {
+    const saved = Number(localStorage.getItem('quiz_idx') || '0');
+    if (Number.isFinite(saved) && saved >= 0 && saved < QUIZ_QUESTIONS.length) setI(saved);
+  }, []);
   const q = QUIZ_QUESTIONS[i];
   const list = answers[i] || [];
   const myRow = list.find((a) => a.user_id === user?.id) || null;
@@ -114,9 +119,21 @@ function CoupleQuiz() {
 
   const [answer, setAnswer] = useState<string | null>(null);
   const [guess, setGuess] = useState<string | null>(null);
+  const [submitErr, setSubmitErr] = useState('');
 
-  // 문항 이동 시 로컬 선택 초기화
-  const goto = (n: number) => { setAnswer(null); setGuess(null); setI(n); };
+  // 문항 이동 시 로컬 선택 초기화 + 위치 기억
+  const goto = (n: number) => {
+    setAnswer(null); setGuess(null); setSubmitErr('');
+    setI(n);
+    try { localStorage.setItem('quiz_idx', String(n)); } catch { /* ignore */ }
+  };
+
+  const handleSubmit = async () => {
+    if (!answer || !guess) return;
+    setSubmitErr('');
+    const err = await submit(i, answer, guess);
+    if (err) setSubmitErr(err);
+  };
 
   const both = !!myRow && !!partnerRow;
 
@@ -159,7 +176,12 @@ function CoupleQuiz() {
         {both ? (
           <QuizReveal q={q} myRow={myRow!} partnerRow={partnerRow!} partnerName={partner?.full_name || '상대'} />
         ) : myRow ? (
-          <p className="text-center text-sm text-gray-500 py-2">{partner ? `${partner.full_name || '상대'}님이 답하면 정답 공개!` : '상대가 연결되면 함께 즐겨요'}</p>
+          <div className="flex flex-col items-center gap-2 py-2">
+            <p className="text-center text-sm text-gray-500">{partner ? `${partner.full_name || '상대'}님이 답하면 정답 공개!` : '상대가 연결되면 함께 즐겨요'}</p>
+            {partner && (
+              <Button variant="outline" size="sm" onClick={() => refresh()}><RotateCw size={14} /> 새로고침</Button>
+            )}
+          </div>
         ) : (
           <div className="space-y-4">
             <div>
@@ -178,7 +200,8 @@ function CoupleQuiz() {
                 ))}
               </div>
             </div>
-            <Button className="w-full" disabled={!canSubmit} onClick={() => answer && guess && submit(i, answer, guess)}>답 제출</Button>
+            <Button className="w-full" disabled={!canSubmit} onClick={handleSubmit}>답 제출</Button>
+            {submitErr && <p className="text-xs text-red-400 text-center">{submitErr}</p>}
           </div>
         )}
       </Card>
