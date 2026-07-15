@@ -19,6 +19,7 @@ const pageNames: Record<string, string> = {
   '/chat': '채팅',
   '/bucket': '버킷리스트',
   '/fitness': '운동·식단',
+  '/watch': '함께 본 것',
   '/games': '커플 게임',
   '/assistant': 'AI 추천',
   '/notes': '메모',

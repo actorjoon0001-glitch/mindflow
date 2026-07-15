@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, FileText, CheckSquare, Calendar,
-  Settings, LogOut, Heart, ChevronLeft, Map, MessageCircle, Sparkles, LayoutGrid, ListChecks, Sun, Gamepad2, Images, Dumbbell,
+  Settings, LogOut, Heart, ChevronLeft, Map, MessageCircle, Sparkles, LayoutGrid, ListChecks, Sun, Gamepad2, Images, Dumbbell, Film,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar } from '@/components/ui/avatar';
@@ -13,7 +13,7 @@ import { useSkin } from '@/stores/skin';
 import { NAV_ITEMS } from '@/lib/constants';
 
 const icons: Record<string, typeof LayoutDashboard> = {
-  LayoutDashboard, FileText, CheckSquare, Calendar, Settings, Heart, Map, MessageCircle, Sparkles, ListChecks, Sun, Gamepad2, Images, Dumbbell,
+  LayoutDashboard, FileText, CheckSquare, Calendar, Settings, Heart, Map, MessageCircle, Sparkles, ListChecks, Sun, Gamepad2, Images, Dumbbell, Film,
 };
 
 const navItems = NAV_ITEMS.filter((item) => item.href !== '/settings');

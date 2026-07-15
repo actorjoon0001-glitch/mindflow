@@ -278,6 +278,23 @@ export interface CoupleMeal {
   created_at: string;
 }
 
+export type WatchPlatform = 'netflix' | 'youtube' | 'disney' | 'tving' | 'watcha' | 'coupang' | 'cinema' | 'etc';
+export type WatchStatus = 'watched' | 'want';
+
+export interface CoupleWatch {
+  id: string;
+  couple_id: string;
+  user_id: string | null;
+  title: string;
+  platform: WatchPlatform;
+  status: WatchStatus;
+  rating: number | null;
+  review: string | null;
+  url: string | null;
+  watched_date: string | null;
+  created_at: string;
+}
+
 export interface CoupleBucketItem {
   id: string;
   couple_id: string;
@@ -377,6 +394,11 @@ export interface Database {
         Row: CoupleMeal;
         Insert: Partial<CoupleMeal> & { couple_id: string; date: string; content: string };
         Update: Partial<CoupleMeal>;
+      };
+      couple_watchlist: {
+        Row: CoupleWatch;
+        Insert: Partial<CoupleWatch> & { couple_id: string; title: string };
+        Update: Partial<CoupleWatch>;
       };
     };
     Functions: {
