@@ -7,10 +7,15 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useChat } from '@/hooks/use-chat';
+import { useAuthStore } from '@/stores/auth-store';
 import { cn } from '@/lib/utils';
 
 export default function AssistantPage() {
-  const { messages, loading, initialLoading, sendMessage, clearChat } = useChat();
+  const { messages, loading, initialLoading, sendMessage, clearChat, myId } = useChat();
+  const profile = useAuthStore((s) => s.profile);
+  const partner = useAuthStore((s) => s.partner);
+  const nameFor = (uid: string | null) =>
+    uid && uid === myId ? (profile?.full_name || '나') : (partner?.full_name || '상대');
   const [input, setInput] = useState('');
   const [useChatCtx, setUseChatCtx] = useState(true); // 우리 채팅 참고해서 추천
   const [isListening, setIsListening] = useState(false);
@@ -204,6 +209,7 @@ export default function AssistantPage() {
                   'text-[10px] mt-1 block',
                   msg.role === 'user' ? 'text-brand-200' : 'text-gray-600'
                 )}>
+                  {msg.role === 'user' ? `${nameFor(msg.user_id)} · ` : ''}
                   {new Date(msg.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>

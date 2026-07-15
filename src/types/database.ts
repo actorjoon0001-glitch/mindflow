@@ -278,6 +278,15 @@ export interface CoupleMeal {
   created_at: string;
 }
 
+export interface CoupleAiMessage {
+  id: string;
+  couple_id: string;
+  user_id: string | null;
+  role: 'user' | 'assistant';
+  content: string;
+  created_at: string;
+}
+
 export type WatchPlatform = 'netflix' | 'youtube' | 'disney' | 'tving' | 'watcha' | 'coupang' | 'cinema' | 'etc';
 export type WatchStatus = 'watched' | 'want';
 
@@ -399,6 +408,11 @@ export interface Database {
         Row: CoupleWatch;
         Insert: Partial<CoupleWatch> & { couple_id: string; title: string };
         Update: Partial<CoupleWatch>;
+      };
+      couple_ai_messages: {
+        Row: CoupleAiMessage;
+        Insert: Partial<CoupleAiMessage> & { couple_id: string; role: string; content: string };
+        Update: Partial<CoupleAiMessage>;
       };
     };
     Functions: {

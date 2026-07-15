@@ -3,82 +3,100 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuthStore } from '@/stores/auth-store';
-import type { ChatMessage } from '@/types';
+import type { CoupleAiMessage } from '@/types';
 
 export function useChat() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<CoupleAiMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const user = useAuthStore((s) => s.user);
+  const couple = useAuthStore((s) => s.couple);
 
   const fetchMessages = useCallback(async () => {
-    if (!user) return;
+    if (!couple) { setMessages([]); setInitialLoading(false); return; }
     const supabase = createClient();
     const { data } = await supabase
-      .from('chat_messages')
+      .from('couple_ai_messages')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('couple_id', couple.id)
       .order('created_at', { ascending: true })
-      .limit(100);
+      .limit(200);
     setMessages(data || []);
     setInitialLoading(false);
-  }, [user]);
+  }, [couple]);
+
+  useEffect(() => { fetchMessages(); }, [fetchMessages]);
+
+  // 커플이 함께 보도록 실시간 동기화 (상대가 물어본 추천도 바로 보임).
+  useEffect(() => {
+    if (!couple) return;
+    const supabase = createClient();
+    const ch = supabase
+      .channel(`ai_chat:${couple.id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'couple_ai_messages', filter: `couple_id=eq.${couple.id}` },
+        (payload) => {
+          const m = payload.new as CoupleAiMessage;
+          setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m]));
+        })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'couple_ai_messages', filter: `couple_id=eq.${couple.id}` },
+        () => fetchMessages())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [couple, fetchMessages]);
 
   useEffect(() => {
-    fetchMessages();
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchMessages(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', fetchMessages);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', fetchMessages);
+    };
   }, [fetchMessages]);
 
+  const insert = async (role: 'user' | 'assistant', content: string) => {
+    if (!couple || !user) return;
+    const supabase = createClient();
+    const { data } = await supabase
+      .from('couple_ai_messages')
+      .insert({ couple_id: couple.id, user_id: user.id, role, content })
+      .select()
+      .single();
+    if (data) setMessages((prev) => (prev.some((x) => x.id === data.id) ? prev : [...prev, data]));
+  };
+
   const sendMessage = async (content: string, includeChat = true) => {
-    if (!user || !content.trim()) return;
+    if (!user || !couple || !content.trim()) return;
     setLoading(true);
 
-    const supabase = createClient();
+    await insert('user', content);
 
-    // Save user message
-    const { data: userMsg } = await supabase
-      .from('chat_messages')
-      .insert({ user_id: user.id, role: 'user' as const, content })
-      .select()
-      .single();
-
-    if (userMsg) setMessages((prev) => [...prev, userMsg]);
-
-    // Get AI response via server API
-    const res = await fetch('/api/ai/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: content, includeChat }),
-    });
-    const response = await res.json();
-
-    // Build assistant message with executed action info
-    let assistantContent = response.content || '';
-    if (response.executedActions?.length) {
-      assistantContent += '\n\n✅ ' + response.executedActions.join('\n✅ ');
+    let assistantContent = '';
+    try {
+      const res = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: content, includeChat }),
+      });
+      const response = await res.json();
+      assistantContent = response.content || 'AI 응답을 불러오지 못했어요.';
+      if (response.executedActions?.length) {
+        assistantContent += '\n\n✅ ' + response.executedActions.join('\n✅ ');
+      }
+    } catch {
+      assistantContent = 'AI 응답을 불러오지 못했어요. 잠시 후 다시 시도해주세요.';
     }
 
-    // Save assistant message
-    const { data: assistantMsg } = await supabase
-      .from('chat_messages')
-      .insert({
-        user_id: user.id,
-        role: 'assistant' as const,
-        content: assistantContent,
-        metadata: { actions: response.actions, executedActions: response.executedActions },
-      })
-      .select()
-      .single();
-
-    if (assistantMsg) setMessages((prev) => [...prev, assistantMsg]);
+    await insert('assistant', assistantContent);
     setLoading(false);
   };
 
   const clearChat = async () => {
-    if (!user) return;
+    if (!couple) return;
     const supabase = createClient();
-    await supabase.from('chat_messages').delete().eq('user_id', user.id);
+    await supabase.from('couple_ai_messages').delete().eq('couple_id', couple.id);
     setMessages([]);
   };
 
-  return { messages, loading, initialLoading, sendMessage, clearChat };
+  return { messages, loading, initialLoading, sendMessage, clearChat, myId: user?.id };
 }
