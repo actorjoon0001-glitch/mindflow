@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Menu, Bell, BellOff, Briefcase, Lock, PanelRightOpen, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNotifications } from '@/hooks/use-notifications';
+import { subscribeToPush } from '@/lib/push-client';
 import { useBossMode } from '@/stores/boss-mode';
 import { useAppLock } from '@/stores/app-lock';
 import { useSkin } from '@/stores/skin';
@@ -56,6 +57,8 @@ export function Header({ onMenuToggle }: HeaderProps) {
     if (permission !== 'granted') {
       await enableNotifications();
     }
+    // 권한 허용과 별개로 웹푸시 구독까지 등록해야 앱을 꺼도 상대 메시지 알림이 온다.
+    subscribeToPush().catch(() => { /* 조용히 무시 */ });
   };
 
   return (

@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { MapPin, Plus, Search, Trash2, Star, Loader2, X } from 'lucide-react';
+import { MapPin, Plus, Search, Trash2, Star, Loader2, X, ImagePlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog } from '@/components/ui/dialog';
 import { useCouplePlaces } from '@/hooks/use-couple-places';
+import { useAuthStore } from '@/stores/auth-store';
+import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 import { COUPLE_PLACE_CATEGORIES } from '@/lib/constants';
 import type { CouplePlace, CouplePlaceCategory } from '@/types';
@@ -25,6 +27,7 @@ const CATEGORY_KEYS = Object.keys(COUPLE_PLACE_CATEGORIES) as CouplePlaceCategor
 
 export default function MapPage() {
   const { places, loading, createPlace, deletePlace } = useCouplePlaces();
+  const couple = useAuthStore((s) => s.couple);
   const [focus, setFocus] = useState<CouplePlace | null>(null);
   const [pending, setPending] = useState<{ lat: number; lng: number } | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -37,6 +40,28 @@ export default function MapPage() {
   const [rating, setRating] = useState(0);
   const [visitedDate, setVisitedDate] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // photo attach
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState('');
+
+  const pickPhoto = (file: File | null) => {
+    setPhotoError('');
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { setPhotoError('이미지 파일만 올릴 수 있어요.'); return; }
+    if (file.size > 10 * 1024 * 1024) { setPhotoError('10MB 이하 이미지만 올릴 수 있어요.'); return; }
+    setPhotoFile(file);
+    setPhotoPreview((prev) => { if (prev) URL.revokeObjectURL(prev); return URL.createObjectURL(file); });
+  };
+
+  const clearPhoto = () => {
+    setPhotoError('');
+    setPhotoFile(null);
+    setPhotoPreview((prev) => { if (prev) URL.revokeObjectURL(prev); return null; });
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   // geocode search
   const [searchQ, setSearchQ] = useState('');
@@ -54,6 +79,7 @@ export default function MapPage() {
   const resetForm = () => {
     setName(''); setAddress(''); setMemo(''); setCategory('date');
     setRating(0); setVisitedDate(''); setPending(null);
+    clearPhoto();
   };
 
   const pickResult = (r: GeoResult) => {
@@ -88,6 +114,24 @@ export default function MapPage() {
   const handleSave = async () => {
     if (!name.trim() || !pending) return;
     setSaving(true);
+
+    // 사진이 첨부됐으면 먼저 스토리지에 업로드하고 공개 URL을 얻는다.
+    let photoUrl: string | null = null;
+    if (photoFile && couple) {
+      const supabase = createClient();
+      const ext = (photoFile.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+      const path = `${couple.id}/places/${crypto.randomUUID()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from('chat-images')
+        .upload(path, photoFile, { contentType: photoFile.type, upsert: false });
+      if (upErr) {
+        setPhotoError('사진 업로드에 실패했어요. 사진 없이 저장할게요.');
+      } else {
+        const { data: pub } = supabase.storage.from('chat-images').getPublicUrl(path);
+        photoUrl = pub.publicUrl;
+      }
+    }
+
     await createPlace({
       name,
       lat: pending.lat,
@@ -97,6 +141,7 @@ export default function MapPage() {
       category,
       rating: rating || null,
       visited_date: visitedDate || null,
+      photo_url: photoUrl,
     });
     setSaving(false);
     setShowForm(false);
@@ -195,6 +240,10 @@ export default function MapPage() {
                       <Trash2 size={13} />
                     </button>
                   </div>
+                  {place.photo_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={place.photo_url} alt={place.name} className="w-full h-20 object-cover rounded-lg mt-1.5" />
+                  )}
                   <p className="text-sm font-medium text-gray-100 truncate mt-1.5">{place.name}</p>
                   {place.rating ? (
                     <div className="flex gap-0.5 mt-0.5">
@@ -251,6 +300,37 @@ export default function MapPage() {
               rows={3}
               className="w-full rounded-lg border bg-surface-100 px-4 py-2.5 text-sm text-gray-100 placeholder:text-gray-500 border-surface-300 focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
             />
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-gray-300">사진 (선택)</label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => pickPhoto(e.target.files?.[0] ?? null)}
+            />
+            {photoPreview ? (
+              <div className="relative w-full">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={photoPreview} alt="첨부 사진 미리보기" className="w-full max-h-52 object-cover rounded-lg border border-surface-300" />
+                <button
+                  onClick={clearPhoto}
+                  className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 text-white flex items-center justify-center"
+                  aria-label="사진 제거"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-lg border border-dashed border-surface-400 text-sm text-gray-400 hover:bg-surface-200 transition-colors"
+              >
+                <ImagePlus size={16} /> 사진 올리기
+              </button>
+            )}
+            {photoError && <p className="text-xs text-amber-400">{photoError}</p>}
           </div>
           {address && <p className="text-xs text-gray-500">📍 {address}</p>}
           <div className="flex justify-end gap-2">
