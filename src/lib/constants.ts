@@ -9,6 +9,7 @@ export const NAV_ITEMS = [
   { label: '사진첩', href: '/album', icon: 'Images' },
   { label: '채팅', href: '/chat', icon: 'MessageCircle' },
   { label: '버킷리스트', href: '/bucket', icon: 'ListChecks' },
+  { label: '운동·식단', href: '/fitness', icon: 'Dumbbell' },
   { label: '게임', href: '/games', icon: 'Gamepad2' },
   { label: 'AI 추천', href: '/assistant', icon: 'Sparkles' },
   { label: '메모', href: '/notes', icon: 'FileText' },
@@ -51,6 +52,24 @@ export const BUCKET_CATEGORIES: Record<string, { label: string; emoji: string }>
   activity: { label: '같이 하고 싶은 것', emoji: '🎯' },
   travel: { label: '여행', emoji: '✈️' },
   etc: { label: '기타', emoji: '💭' },
+};
+
+export const BODY_PARTS: Record<string, { label: string; emoji: string; color: string }> = {
+  chest: { label: '가슴', emoji: '💪', color: '#ef4444' },
+  back: { label: '등', emoji: '🔙', color: '#3b82f6' },
+  shoulder: { label: '어깨', emoji: '🗻', color: '#f59e0b' },
+  arm: { label: '팔', emoji: '💪', color: '#8b5cf6' },
+  leg: { label: '하체', emoji: '🦵', color: '#22c55e' },
+  abs: { label: '복근', emoji: '🔥', color: '#f97316' },
+  cardio: { label: '유산소', emoji: '🏃', color: '#06b6d4' },
+  fullbody: { label: '전신', emoji: '🤸', color: '#ec4899' },
+};
+
+export const MEAL_TYPES: Record<string, { label: string; emoji: string }> = {
+  breakfast: { label: '아침', emoji: '🌅' },
+  lunch: { label: '점심', emoji: '☀️' },
+  dinner: { label: '저녁', emoji: '🌙' },
+  snack: { label: '간식', emoji: '🍪' },
 };
 
 export const MILESTONE_EMOJIS = ['💗', '🎉', '✈️', '🎬', '🍰', '🌸', '🏠', '💍', '🐣', '⭐'];

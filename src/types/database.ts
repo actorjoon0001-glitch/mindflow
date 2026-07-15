@@ -251,6 +251,33 @@ export interface PushSubscriptionRow {
 
 export type BucketCategory = 'place' | 'food' | 'activity' | 'travel' | 'etc';
 
+export type WorkoutBodyPart = 'chest' | 'back' | 'shoulder' | 'arm' | 'leg' | 'abs' | 'cardio' | 'fullbody';
+export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+
+export interface CoupleWorkout {
+  id: string;
+  couple_id: string;
+  user_id: string | null;
+  date: string; // YYYY-MM-DD
+  body_parts: WorkoutBodyPart[];
+  duration_min: number | null;
+  is_pt: boolean;
+  memo: string | null;
+  created_at: string;
+}
+
+export interface CoupleMeal {
+  id: string;
+  couple_id: string;
+  user_id: string | null;
+  date: string; // YYYY-MM-DD
+  meal_type: MealType;
+  content: string;
+  photo_url: string | null;
+  calories: number | null;
+  created_at: string;
+}
+
 export interface CoupleBucketItem {
   id: string;
   couple_id: string;
@@ -340,6 +367,16 @@ export interface Database {
         Row: CouplePhoto;
         Insert: Partial<CouplePhoto> & { couple_id: string; url: string };
         Update: Partial<CouplePhoto>;
+      };
+      couple_workouts: {
+        Row: CoupleWorkout;
+        Insert: Partial<CoupleWorkout> & { couple_id: string; date: string };
+        Update: Partial<CoupleWorkout>;
+      };
+      couple_meals: {
+        Row: CoupleMeal;
+        Insert: Partial<CoupleMeal> & { couple_id: string; date: string; content: string };
+        Update: Partial<CoupleMeal>;
       };
     };
     Functions: {
