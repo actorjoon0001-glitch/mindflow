@@ -12,10 +12,23 @@ function monthLabel(iso: string) {
 }
 
 export default function AlbumPage() {
-  const { photos, loading, uploading, uploadPhotos, deletePhoto } = useCoupleAlbum();
+  const { photos, loading, uploading, uploadPhotos, removePhoto } = useCoupleAlbum();
   const fileRef = useRef<HTMLInputElement>(null);
   const [err, setErr] = useState('');
   const [viewer, setViewer] = useState<AlbumPhoto | null>(null);
+
+  const handleDelete = async () => {
+    if (!viewer) return;
+    const msg = viewer.source === 'chat'
+      ? '이 사진을 삭제하면 채팅에서도 사라져요. 삭제할까요?'
+      : viewer.source === 'place'
+      ? '이 사진을 삭제하면 지도 장소에서도 사라져요. 삭제할까요?'
+      : '이 사진을 삭제할까요?';
+    if (!confirm(msg)) return;
+    const target = viewer;
+    setViewer(null);
+    await removePhoto(target);
+  };
 
   const groups = useMemo(() => {
     const map: Record<string, AlbumPhoto[]> = {};
@@ -91,14 +104,12 @@ export default function AlbumPage() {
               {new Date(viewer.date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
               {viewer.source === 'chat' ? ' · 채팅 사진' : viewer.source === 'place' ? ` · 지도${viewer.caption ? ` · ${viewer.caption}` : ''}` : ''}
             </span>
-            {viewer.id && (
-              <button
-                onClick={() => { deletePhoto(viewer.id!); setViewer(null); }}
-                className="flex items-center gap-1 text-sm text-red-400 hover:text-red-300"
-              >
-                <Trash2 size={15} /> 삭제
-              </button>
-            )}
+            <button
+              onClick={handleDelete}
+              className="flex items-center gap-1 text-sm text-red-400 hover:text-red-300"
+            >
+              <Trash2 size={15} /> 삭제
+            </button>
           </div>
         </div>
       )}
