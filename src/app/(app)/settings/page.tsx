@@ -44,6 +44,26 @@ export default function SettingsPage() {
     setPushLoading(false);
     setPushMsg(reason ?? '✅ 푸시 알림이 켜졌어요! 이제 앱을 꺼도 상대 메시지 알림이 옵니다.');
   };
+
+  // 이 기기로 실제 웹푸시를 보내 진동/알림을 즉시 확인. (먼저 구독을 보장한 뒤 발송)
+  const handleSelfTestPush = async () => {
+    setPushMsg('');
+    setPushLoading(true);
+    const subReason = await subscribeToPush();
+    if (subReason) { setPushLoading(false); setPushMsg(subReason); return; }
+    try {
+      const res = await fetch('/api/push/test', { method: 'POST' });
+      const data = await res.json();
+      if (data.ok) {
+        setPushMsg(`✅ 이 기기로 테스트 푸시를 보냈어요! (구독 ${data.found}개 중 ${data.sent}개 발송) 잠시 후 진동/알림이 뜨는지 확인해보세요.`);
+      } else {
+        setPushMsg(data.reason || `⚠️ 발송에 실패했어요. (구독 ${data.found ?? 0}개, 발송 ${data.sent ?? 0}개)`);
+      }
+    } catch {
+      setPushMsg('⚠️ 테스트 요청에 실패했어요. 네트워크를 확인해주세요.');
+    }
+    setPushLoading(false);
+  };
   const [fullName, setFullName] = useState(profile?.full_name || '');
   const [timezone, setTimezone] = useState(profile?.timezone || 'Asia/Seoul');
   const [language, setLanguage] = useState(profile?.language || 'ko');
@@ -227,10 +247,18 @@ export default function SettingsPage() {
               <p className="text-sm font-medium text-gray-200">푸시 알림 (앱 꺼도 알림)</p>
               <p className="text-xs text-gray-500">켜두면 앱을 완전히 닫아도 상대 메시지 알림이 와요 (카톡처럼)</p>
             </div>
-            <Button size="sm" className="shrink-0" onClick={handleEnablePush} loading={pushLoading}>
-              <Bell size={14} /> 푸시 켜기
-            </Button>
+            <div className="flex shrink-0 gap-2">
+              <Button size="sm" variant="outline" onClick={handleSelfTestPush} loading={pushLoading}>
+                내 폰 테스트
+              </Button>
+              <Button size="sm" onClick={handleEnablePush} loading={pushLoading}>
+                <Bell size={14} /> 푸시 켜기
+              </Button>
+            </div>
           </div>
+          <p className="text-xs text-gray-500">
+            📲 <b>내 폰 테스트</b>: 이 기기로 직접 푸시를 보내 진동/알림이 오는지 확인해요. (여자친구 폰에서 눌러 확인하면 좋아요)
+          </p>
           {pushMsg && (
             <p className={`text-xs ${pushMsg.startsWith('✅') ? 'text-emerald-400' : 'text-amber-400'}`}>{pushMsg}</p>
           )}
