@@ -6,6 +6,7 @@ export const NAV_ITEMS = [
   { label: '오늘의 우리', href: '/today', icon: 'Sun' },
   { label: '캘린더', href: '/calendar', icon: 'Calendar' },
   { label: '지도', href: '/map', icon: 'Map' },
+  { label: '사진첩', href: '/album', icon: 'Images' },
   { label: '채팅', href: '/chat', icon: 'MessageCircle' },
   { label: '버킷리스트', href: '/bucket', icon: 'ListChecks' },
   { label: '게임', href: '/games', icon: 'Gamepad2' },
