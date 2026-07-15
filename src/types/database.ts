@@ -228,6 +228,15 @@ export interface CoupleMood {
   updated_at: string;
 }
 
+export interface PushSubscriptionRow {
+  id: string;
+  user_id: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  created_at: string;
+}
+
 export type BucketCategory = 'place' | 'food' | 'activity' | 'travel' | 'etc';
 
 export interface CoupleBucketItem {
@@ -309,6 +318,11 @@ export interface Database {
         Row: CoupleMood;
         Insert: { couple_id: string; user_id: string; date: string; emoji: string; note?: string | null };
         Update: Partial<CoupleMood>;
+      };
+      push_subscriptions: {
+        Row: PushSubscriptionRow;
+        Insert: { user_id: string; endpoint: string; p256dh: string; auth: string };
+        Update: Partial<PushSubscriptionRow>;
       };
     };
     Functions: {
