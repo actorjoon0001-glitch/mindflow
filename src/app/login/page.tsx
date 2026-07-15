@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Heart, ArrowRight } from 'lucide-react';
@@ -16,6 +16,15 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [needsConfirmation, setNeedsConfirmation] = useState(false);
   const [resent, setResent] = useState(false);
+  const [remember, setRemember] = useState(true);
+
+  // 자동 로그인: 직전에 저장한 이메일을 불러와 채워둠(세션은 별도로 항상 유지됨).
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('remember_email');
+      if (saved) { setEmail(saved); setRemember(true); }
+    } catch { /* ignore */ }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,6 +37,10 @@ export default function LoginPage() {
       setError(result.error);
       setNeedsConfirmation(!!result.needsConfirmation);
     } else {
+      try {
+        if (remember) localStorage.setItem('remember_email', email);
+        else localStorage.removeItem('remember_email');
+      } catch { /* ignore */ }
       router.push('/dashboard');
     }
   };
@@ -126,7 +139,16 @@ export default function LoginPage() {
               </div>
             )}
 
-            <div className="text-right">
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={remember}
+                  onChange={(e) => setRemember(e.target.checked)}
+                  className="w-4 h-4 rounded border-surface-400 accent-brand-500"
+                />
+                <span className="text-sm text-gray-400">자동 로그인</span>
+              </label>
               <Link href="/forgot-password" className="text-sm text-gray-500 hover:text-brand-400 transition-colors">
                 비밀번호를 잊으셨나요?
               </Link>
