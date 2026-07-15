@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { compressImage } from '@/lib/image';
 import { useAuthStore } from '@/stores/auth-store';
 
 export interface AlbumPhoto {
@@ -10,7 +11,7 @@ export interface AlbumPhoto {
   url: string;
   caption: string | null;
   date: string; // ISO (taken_date 또는 created_at)
-  source: 'album' | 'chat';
+  source: 'album' | 'chat' | 'place';
 }
 
 export function useCoupleAlbum() {
@@ -23,9 +24,10 @@ export function useCoupleAlbum() {
   const fetchPhotos = useCallback(async () => {
     if (!couple) { setPhotos([]); setLoading(false); return; }
     const supabase = createClient();
-    const [albumRes, chatRes] = await Promise.all([
+    const [albumRes, chatRes, placesRes] = await Promise.all([
       supabase.from('couple_photos').select('*').eq('couple_id', couple.id),
       supabase.from('couple_messages').select('id, image_url, created_at').eq('couple_id', couple.id).not('image_url', 'is', null),
+      supabase.from('couple_places').select('*').eq('couple_id', couple.id),
     ]);
 
     const album: AlbumPhoto[] = (albumRes.data || []).map((p) => ({
@@ -36,8 +38,17 @@ export function useCoupleAlbum() {
       key: `c-${m.id}`, id: null, url: m.image_url as string, caption: null,
       date: m.created_at, source: 'chat',
     }));
+    // 지도 장소 사진도 앨범에 자동 포함 (photos 배열 우선, 없으면 photo_url).
+    const place: AlbumPhoto[] = [];
+    (placesRes.data || []).forEach((pl) => {
+      const pics: string[] = (pl.photos && pl.photos.length) ? pl.photos : (pl.photo_url ? [pl.photo_url] : []);
+      const d = pl.visited_date ? `${pl.visited_date}T00:00:00` : pl.created_at;
+      pics.forEach((url, i) => place.push({
+        key: `p-${pl.id}-${i}`, id: null, url, caption: pl.name, date: d, source: 'place',
+      }));
+    });
 
-    const merged = [...album, ...chat].sort((a, b) => b.date.localeCompare(a.date));
+    const merged = [...album, ...chat, ...place].sort((a, b) => b.date.localeCompare(a.date));
     setPhotos(merged);
     setLoading(false);
   }, [couple]);
@@ -47,12 +58,13 @@ export function useCoupleAlbum() {
   const uploadPhoto = async (file: File, caption?: string, takenDate?: string): Promise<string | null> => {
     if (!couple || !user) return null;
     if (!file.type.startsWith('image/')) return '이미지 파일만 올릴 수 있어요.';
-    if (file.size > 10 * 1024 * 1024) return '10MB 이하 이미지만 올릴 수 있어요.';
+    if (file.size > 20 * 1024 * 1024) return '20MB 이하 이미지만 올릴 수 있어요.';
     setUploading(true);
     const supabase = createClient();
-    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+    const compressed = await compressImage(file); // 업로드 전 자동 압축
+    const ext = (compressed.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
     const path = `${couple.id}/album/${crypto.randomUUID()}.${ext}`;
-    const { error: upErr } = await supabase.storage.from('chat-images').upload(path, file, { contentType: file.type });
+    const { error: upErr } = await supabase.storage.from('chat-images').upload(path, compressed, { contentType: compressed.type });
     if (upErr) { setUploading(false); return '업로드에 실패했어요.'; }
     const { data: pub } = supabase.storage.from('chat-images').getPublicUrl(path);
     await supabase.from('couple_photos').insert({
@@ -64,23 +76,30 @@ export function useCoupleAlbum() {
     return null;
   };
 
-  // 여러 장을 한 번에 업로드. 성공/실패 개수와 실패 사유(있으면 첫 사유)를 반환.
+  // 여러 장을 한 번에 업로드. 압축 후 병렬 업로드로 속도 개선. 성공/실패 개수 반환.
   const uploadPhotos = async (files: File[]): Promise<{ ok: number; failed: number; reason?: string }> => {
     if (!couple || !user) return { ok: 0, failed: files.length, reason: '로그인이 필요해요.' };
     setUploading(true);
     const supabase = createClient();
-    let ok = 0, failed = 0, reason: string | undefined;
-    for (const file of files) {
-      if (!file.type.startsWith('image/')) { failed++; reason ||= '이미지 파일만 올릴 수 있어요.'; continue; }
-      if (file.size > 10 * 1024 * 1024) { failed++; reason ||= '10MB 이하 이미지만 올릴 수 있어요.'; continue; }
-      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
-      const path = `${couple.id}/album/${crypto.randomUUID()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from('chat-images').upload(path, file, { contentType: file.type });
-      if (upErr) { failed++; reason ||= '일부 사진 업로드에 실패했어요.'; continue; }
-      const { data: pub } = supabase.storage.from('chat-images').getPublicUrl(path);
-      await supabase.from('couple_photos').insert({ couple_id: couple.id, created_by: user.id, url: pub.publicUrl });
-      ok++;
-    }
+    let reason: string | undefined;
+
+    const results = await Promise.all(files.map(async (file) => {
+      if (!file.type.startsWith('image/')) { reason ||= '이미지 파일만 올릴 수 있어요.'; return false; }
+      if (file.size > 20 * 1024 * 1024) { reason ||= '20MB 이하 이미지만 올릴 수 있어요.'; return false; }
+      try {
+        const compressed = await compressImage(file);
+        const ext = (compressed.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+        const path = `${couple.id}/album/${crypto.randomUUID()}.${ext}`;
+        const { error: upErr } = await supabase.storage.from('chat-images').upload(path, compressed, { contentType: compressed.type });
+        if (upErr) { reason ||= '일부 사진 업로드에 실패했어요.'; return false; }
+        const { data: pub } = supabase.storage.from('chat-images').getPublicUrl(path);
+        await supabase.from('couple_photos').insert({ couple_id: couple.id, created_by: user.id, url: pub.publicUrl });
+        return true;
+      } catch { reason ||= '일부 사진 업로드에 실패했어요.'; return false; }
+    }));
+
+    const ok = results.filter(Boolean).length;
+    const failed = results.length - ok;
     await fetchPhotos();
     setUploading(false);
     return { ok, failed, reason };

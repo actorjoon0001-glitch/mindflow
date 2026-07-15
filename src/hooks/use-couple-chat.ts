@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { compressImage } from '@/lib/image';
 import { useAuthStore } from '@/stores/auth-store';
 import type { CoupleMessage, CoupleMessageReaction } from '@/types';
 
@@ -153,16 +154,17 @@ export function useCoupleChat() {
   const sendImage = async (file: File): Promise<string | null> => {
     if (!couple || !user) return null;
     if (!file.type.startsWith('image/')) return '이미지 파일만 보낼 수 있어요.';
-    if (file.size > 10 * 1024 * 1024) return '10MB 이하 이미지만 보낼 수 있어요.';
+    if (file.size > 20 * 1024 * 1024) return '20MB 이하 이미지만 보낼 수 있어요.';
 
     setSending(true);
     const supabase = createClient();
-    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+    const compressed = await compressImage(file); // 전송 전 자동 압축
+    const ext = (compressed.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
     const path = `${couple.id}/${crypto.randomUUID()}.${ext}`;
 
     const { error: upErr } = await supabase.storage
       .from('chat-images')
-      .upload(path, file, { contentType: file.type, upsert: false });
+      .upload(path, compressed, { contentType: compressed.type, upsert: false });
 
     if (upErr) {
       setSending(false);

@@ -69,8 +69,8 @@ export default function AlbumPage() {
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={p.url} alt="사진" loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                    {p.source === 'chat' && (
-                      <span className="absolute bottom-1 left-1 text-[9px] px-1 rounded bg-black/50 text-white/90">채팅</span>
+                    {p.source !== 'album' && (
+                      <span className="absolute bottom-1 left-1 text-[9px] px-1 rounded bg-black/50 text-white/90">{p.source === 'chat' ? '채팅' : '지도'}</span>
                     )}
                   </button>
                 ))}
@@ -89,7 +89,7 @@ export default function AlbumPage() {
           <div className="mt-3 flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
             <span className="text-sm text-white/70">
               {new Date(viewer.date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
-              {viewer.source === 'chat' ? ' · 채팅 사진' : ''}
+              {viewer.source === 'chat' ? ' · 채팅 사진' : viewer.source === 'place' ? ` · 지도${viewer.caption ? ` · ${viewer.caption}` : ''}` : ''}
             </span>
             {viewer.id && (
               <button

@@ -9,6 +9,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { useCouplePlaces } from '@/hooks/use-couple-places';
 import { useAuthStore } from '@/stores/auth-store';
 import { createClient } from '@/lib/supabase/client';
+import { compressImage } from '@/lib/image';
 import { cn } from '@/lib/utils';
 import { COUPLE_PLACE_CATEGORIES } from '@/lib/constants';
 import type { CouplePlace, CouplePlaceCategory } from '@/types';
@@ -155,21 +156,24 @@ export default function MapPage() {
     if (!editingId && !pending) return;
     setSaving(true);
 
-    // 새로 고른 사진들을 스토리지에 업로드하고 공개 URL을 모은다.
-    const uploadedUrls: string[] = [];
+    // 새로 고른 사진들을 압축 후 병렬 업로드하고 공개 URL을 모은다.
+    let uploadedUrls: string[] = [];
     if (newPhotos.length && couple) {
       const supabase = createClient();
-      for (const { file } of newPhotos) {
-        const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
-        const path = `${couple.id}/places/${crypto.randomUUID()}.${ext}`;
-        const { error: upErr } = await supabase.storage
-          .from('chat-images')
-          .upload(path, file, { contentType: file.type, upsert: false });
-        if (!upErr) {
+      const results = await Promise.all(newPhotos.map(async ({ file }) => {
+        try {
+          const compressed = await compressImage(file);
+          const ext = (compressed.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+          const path = `${couple.id}/places/${crypto.randomUUID()}.${ext}`;
+          const { error: upErr } = await supabase.storage
+            .from('chat-images')
+            .upload(path, compressed, { contentType: compressed.type, upsert: false });
+          if (upErr) return null;
           const { data: pub } = supabase.storage.from('chat-images').getPublicUrl(path);
-          uploadedUrls.push(pub.publicUrl);
-        }
-      }
+          return pub.publicUrl;
+        } catch { return null; }
+      }));
+      uploadedUrls = results.filter((u): u is string => !!u);
       if (uploadedUrls.length < newPhotos.length) {
         setPhotoError('일부 사진 업로드에 실패했어요.');
       }
