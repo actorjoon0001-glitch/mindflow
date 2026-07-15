@@ -9,6 +9,7 @@ import {
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DailyLoveQuote } from '@/components/couple/daily-love-quote';
+import { CoupleMainPhoto } from '@/components/couple/couple-main-photo';
 import { MilestoneCard } from '@/components/couple/milestone-card';
 import { InviteCode } from '@/components/couple/couple-gate';
 import { useAuthStore } from '@/stores/auth-store';
@@ -118,6 +119,9 @@ export default function DashboardPage() {
             </div>
             <Heart size={180} className="absolute -right-8 -bottom-10 text-white/10" fill="currentColor" />
           </Card>
+
+          {/* 우리 대표 사진 */}
+          <CoupleMainPhoto />
 
           {/* Daily love quote */}
           <DailyLoveQuote />

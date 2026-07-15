@@ -139,6 +139,7 @@ export interface Couple {
   couple_name: string;
   anniversary_date: string; // YYYY-MM-DD
   invite_code: string;
+  main_photo_url: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
