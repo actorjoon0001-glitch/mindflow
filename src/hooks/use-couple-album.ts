@@ -8,6 +8,7 @@ import { useAuthStore } from '@/stores/auth-store';
 export interface AlbumPhoto {
   key: string;
   id: string | null; // couple_photos.id (앨범 업로드만 삭제 가능)
+  ownerId: string;   // 원본 행 id (album: couple_photos, chat: couple_messages, place: couple_places)
   url: string;
   caption: string | null;
   date: string; // ISO (taken_date 또는 created_at)
@@ -31,11 +32,11 @@ export function useCoupleAlbum() {
     ]);
 
     const album: AlbumPhoto[] = (albumRes.data || []).map((p) => ({
-      key: `a-${p.id}`, id: p.id, url: p.url, caption: p.caption,
+      key: `a-${p.id}`, id: p.id, ownerId: p.id, url: p.url, caption: p.caption,
       date: p.taken_date ? `${p.taken_date}T00:00:00` : p.created_at, source: 'album',
     }));
     const chat: AlbumPhoto[] = (chatRes.data || []).map((m) => ({
-      key: `c-${m.id}`, id: null, url: m.image_url as string, caption: null,
+      key: `c-${m.id}`, id: null, ownerId: m.id, url: m.image_url as string, caption: null,
       date: m.created_at, source: 'chat',
     }));
     // 지도 장소 사진도 앨범에 자동 포함 (photos 배열 우선, 없으면 photo_url).
@@ -44,7 +45,7 @@ export function useCoupleAlbum() {
       const pics: string[] = (pl.photos && pl.photos.length) ? pl.photos : (pl.photo_url ? [pl.photo_url] : []);
       const d = pl.visited_date ? `${pl.visited_date}T00:00:00` : pl.created_at;
       pics.forEach((url, i) => place.push({
-        key: `p-${pl.id}-${i}`, id: null, url, caption: pl.name, date: d, source: 'place',
+        key: `p-${pl.id}-${i}`, id: null, ownerId: pl.id, url, caption: pl.name, date: d, source: 'place',
       }));
     });
 
@@ -111,5 +112,27 @@ export function useCoupleAlbum() {
     setPhotos((prev) => prev.filter((p) => p.id !== id));
   };
 
-  return { photos, loading, uploading, uploadPhoto, uploadPhotos, deletePhoto };
+  // 출처에 맞게 사진 삭제. album=couple_photos, chat=메시지, place=장소 photos에서 제거.
+  const removePhoto = async (photo: AlbumPhoto) => {
+    const supabase = createClient();
+    if (photo.source === 'album') {
+      await supabase.from('couple_photos').delete().eq('id', photo.ownerId);
+    } else if (photo.source === 'chat') {
+      await supabase.from('couple_messages').delete().eq('id', photo.ownerId);
+    } else if (photo.source === 'place') {
+      const { data: pl } = await supabase
+        .from('couple_places')
+        .select('photos, photo_url')
+        .eq('id', photo.ownerId)
+        .maybeSingle();
+      const remaining = ((pl?.photos as string[] | null) || []).filter((u) => u !== photo.url);
+      await supabase
+        .from('couple_places')
+        .update({ photos: remaining, photo_url: remaining[0] ?? null })
+        .eq('id', photo.ownerId);
+    }
+    setPhotos((prev) => prev.filter((p) => p.key !== photo.key));
+  };
+
+  return { photos, loading, uploading, uploadPhoto, uploadPhotos, deletePhoto, removePhoto };
 }
