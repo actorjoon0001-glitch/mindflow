@@ -10,6 +10,7 @@ export const NAV_ITEMS = [
   { label: '채팅', href: '/chat', icon: 'MessageCircle' },
   { label: '버킷리스트', href: '/bucket', icon: 'ListChecks' },
   { label: '운동·식단', href: '/fitness', icon: 'Dumbbell' },
+  { label: '함께 본 것', href: '/watch', icon: 'Film' },
   { label: '게임', href: '/games', icon: 'Gamepad2' },
   { label: 'AI 추천', href: '/assistant', icon: 'Sparkles' },
   { label: '메모', href: '/notes', icon: 'FileText' },
@@ -70,6 +71,17 @@ export const MEAL_TYPES: Record<string, { label: string; emoji: string }> = {
   lunch: { label: '점심', emoji: '☀️' },
   dinner: { label: '저녁', emoji: '🌙' },
   snack: { label: '간식', emoji: '🍪' },
+};
+
+export const WATCH_PLATFORMS: Record<string, { label: string; emoji: string; color: string }> = {
+  netflix: { label: '넷플릭스', emoji: '🎬', color: '#e50914' },
+  youtube: { label: '유튜브', emoji: '▶️', color: '#ff0000' },
+  disney: { label: '디즈니+', emoji: '🏰', color: '#113ccf' },
+  tving: { label: '티빙', emoji: '📺', color: '#ff153c' },
+  watcha: { label: '왓챠', emoji: '🍿', color: '#ff0558' },
+  coupang: { label: '쿠팡플레이', emoji: '🎞️', color: '#3f6be3' },
+  cinema: { label: '극장', emoji: '🎦', color: '#8b5cf6' },
+  etc: { label: '기타', emoji: '📼', color: '#64748b' },
 };
 
 export const MILESTONE_EMOJIS = ['💗', '🎉', '✈️', '🎬', '🍰', '🌸', '🏠', '💍', '🐣', '⭐'];
