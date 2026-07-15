@@ -39,17 +39,31 @@ export function useDailyQuestion() {
     return () => { supabase.removeChannel(ch); };
   }, [couple, fetchAnswers]);
 
+  // 실시간 미수신 대비: 창 복귀 시 새로고침.
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchAnswers(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', fetchAnswers);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', fetchAnswers);
+    };
+  }, [fetchAnswers]);
+
   const myAnswer = answers.find((a) => a.user_id === user?.id)?.answer ?? null;
   const partnerAnswer = partner ? (answers.find((a) => a.user_id === partner.id)?.answer ?? null) : null;
   const bothAnswered = !!myAnswer && !!partnerAnswer;
 
-  const submit = async (answer: string) => {
-    if (!couple || !user || !answer.trim()) return;
+  const submit = async (answer: string): Promise<string | null> => {
+    if (!couple) return '커플 연결이 필요해요.';
+    if (!user) return '로그인이 필요해요.';
+    if (!answer.trim()) return '답변을 입력해주세요.';
     const supabase = createClient();
-    await supabase.from('couple_question_answers').upsert({
+    const { error } = await supabase.from('couple_question_answers').upsert({
       couple_id: couple.id, question_date: date, user_id: user.id, answer: answer.trim(),
     });
-    fetchAnswers();
+    await fetchAnswers();
+    return error ? (error.message || '저장에 실패했어요.') : null;
   };
 
   return { myAnswer, partnerAnswer, bothAnswered, loading, submit, hasPartner: !!partner };

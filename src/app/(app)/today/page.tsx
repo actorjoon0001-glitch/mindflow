@@ -18,13 +18,16 @@ export default function TodayPage() {
   const { myMood, partnerMood, setMood } = useCoupleMood();
   const [draft, setDraft] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [submitErr, setSubmitErr] = useState('');
 
   const handleSubmit = async () => {
     if (!draft.trim()) return;
     setSubmitting(true);
-    await submit(draft);
-    setDraft('');
+    setSubmitErr('');
+    const err = await submit(draft);
     setSubmitting(false);
+    if (err) { setSubmitErr(err); return; }
+    setDraft('');
   };
 
   const myName = profile?.full_name || '나';
@@ -93,6 +96,12 @@ export default function TodayPage() {
                 <Send size={16} /> 답변 등록
               </Button>
             </div>
+            {submitErr && (
+              <p className="text-xs text-red-400">
+                저장 실패: {submitErr}
+                {/couple_question_answers|relation|does not exist|schema/i.test(submitErr) && ' — 오늘의 우리 기능 SQL(0008)이 아직 실행되지 않았을 수 있어요.'}
+              </p>
+            )}
           </div>
         ) : bothAnswered ? (
           <div className="space-y-3">
