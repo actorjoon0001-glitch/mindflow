@@ -180,6 +180,7 @@ export interface CouplePlace {
   rating: number | null;
   visited_date: string | null;
   photo_url: string | null;
+  photos: string[];
   created_at: string;
   updated_at: string;
 }
