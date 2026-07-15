@@ -14,6 +14,7 @@ import { useSkin } from '@/stores/skin';
 import { useNotifPrefs } from '@/stores/notif-prefs';
 import { useNotifications } from '@/hooks/use-notifications';
 import { showLocalNotification } from '@/lib/notify';
+import { subscribeToPush } from '@/lib/push-client';
 import { getDayCount } from '@/lib/couple-utils';
 
 export default function SettingsPage() {
@@ -24,6 +25,8 @@ export default function SettingsPage() {
   const { chatPreview, toggle: toggleChatPreview, hydrate: hydrateNotifPrefs } = useNotifPrefs();
   const { enableNotifications } = useNotifications();
   const [notifTest, setNotifTest] = useState('');
+  const [pushMsg, setPushMsg] = useState('');
+  const [pushLoading, setPushLoading] = useState(false);
 
   useEffect(() => { hydrateNotifPrefs(); }, [hydrateNotifPrefs]);
 
@@ -32,6 +35,14 @@ export default function SettingsPage() {
     await enableNotifications();
     const reason = showLocalNotification('💬 테스트 알림', '알림이 이렇게 표시돼요 😊');
     setNotifTest(reason ?? '✅ 알림을 보냈어요! 방금 알림이 떴는지 확인해보세요.');
+  };
+
+  const handleEnablePush = async () => {
+    setPushMsg('');
+    setPushLoading(true);
+    const reason = await subscribeToPush();
+    setPushLoading(false);
+    setPushMsg(reason ?? '✅ 푸시 알림이 켜졌어요! 이제 앱을 꺼도 상대 메시지 알림이 옵니다.');
   };
   const [fullName, setFullName] = useState(profile?.full_name || '');
   const [timezone, setTimezone] = useState(profile?.timezone || 'Asia/Seoul');
@@ -210,6 +221,19 @@ export default function SettingsPage() {
               />
             </div>
           </label>
+          <div className="border-t border-surface-300" />
+          <div className="flex items-center justify-between gap-3">
+            <div className="pr-3">
+              <p className="text-sm font-medium text-gray-200">푸시 알림 (앱 꺼도 알림)</p>
+              <p className="text-xs text-gray-500">켜두면 앱을 완전히 닫아도 상대 메시지 알림이 와요 (카톡처럼)</p>
+            </div>
+            <Button size="sm" className="shrink-0" onClick={handleEnablePush} loading={pushLoading}>
+              <Bell size={14} /> 푸시 켜기
+            </Button>
+          </div>
+          {pushMsg && (
+            <p className={`text-xs ${pushMsg.startsWith('✅') ? 'text-emerald-400' : 'text-amber-400'}`}>{pushMsg}</p>
+          )}
           <div className="border-t border-surface-300" />
           <div className="flex items-center justify-between gap-3">
             <div>

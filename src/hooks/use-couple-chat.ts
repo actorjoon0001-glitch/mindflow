@@ -145,6 +145,7 @@ export function useCoupleChat() {
       .single();
     if (data) {
       setMessages((prev) => (prev.some((m) => m.id === data.id) ? prev : [...prev, data]));
+      fetch('/api/push/notify', { method: 'POST' }).catch(() => { /* ignore */ });
     }
     setSending(false);
   };
@@ -177,6 +178,7 @@ export function useCoupleChat() {
 
     if (data) {
       setMessages((prev) => (prev.some((m) => m.id === data.id) ? prev : [...prev, data]));
+      fetch('/api/push/notify', { method: 'POST' }).catch(() => { /* ignore */ });
     }
     setSending(false);
     return null;
