@@ -39,7 +39,8 @@ export function Dialog({ open, onClose, title, children, className }: DialogProp
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
+      // z-[70]: 모바일 하단 네비게이션(z-50)보다 위에 떠서 저장 버튼이 가려지지 않게.
+      className="fixed inset-0 z-[70] flex items-center justify-center p-4 animate-fade-in"
       onClick={(e) => {
         if (e.target === overlayRef.current) onClose();
       }}
