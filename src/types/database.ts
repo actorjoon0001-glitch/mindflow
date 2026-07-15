@@ -132,7 +132,7 @@ export interface ChatMessage {
 }
 
 export type CoupleEventCategory = 'date' | 'anniversary' | 'trip' | 'plan' | 'etc';
-export type CouplePlaceCategory = 'restaurant' | 'cafe' | 'activity' | 'travel' | 'etc';
+export type CouplePlaceCategory = 'restaurant' | 'cafe' | 'date' | 'culture' | 'activity' | 'travel' | 'shopping' | 'nature' | 'etc';
 
 export interface Couple {
   id: string;
