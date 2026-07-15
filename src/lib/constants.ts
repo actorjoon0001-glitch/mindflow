@@ -8,6 +8,7 @@ export const NAV_ITEMS = [
   { label: '지도', href: '/map', icon: 'Map' },
   { label: '채팅', href: '/chat', icon: 'MessageCircle' },
   { label: '버킷리스트', href: '/bucket', icon: 'ListChecks' },
+  { label: '게임', href: '/games', icon: 'Gamepad2' },
   { label: 'AI 추천', href: '/assistant', icon: 'Sparkles' },
   { label: '메모', href: '/notes', icon: 'FileText' },
   { label: '할 일', href: '/tasks', icon: 'CheckSquare' },
