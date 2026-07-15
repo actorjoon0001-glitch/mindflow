@@ -21,9 +21,10 @@ const navItems = NAV_ITEMS.filter((item) => item.href !== '/settings');
 interface AppSidebarProps {
   collapsed: boolean;
   onToggle: () => void;
+  onNavigate?: () => void; // 모바일: 메뉴에서 이동 시 오버레이 닫기
 }
 
-export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
+export function AppSidebar({ collapsed, onToggle, onNavigate }: AppSidebarProps) {
   const pathname = usePathname();
   const { profile, signOut, couple } = useAuthStore();
   const discreet = useSkin((s) => s.discreet);
@@ -69,6 +70,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
             <Link
               key={item.href}
               href={item.href}
+              onClick={onNavigate}
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
                 isActive
@@ -88,6 +90,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
       <div className="border-t border-surface-300 p-3 space-y-2">
         <Link
           href="/settings"
+          onClick={onNavigate}
           className={cn(
             'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200',
             pathname === '/settings'

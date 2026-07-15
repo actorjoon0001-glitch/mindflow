@@ -43,7 +43,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               onClick={() => setMobileMenuOpen(false)}
             />
             <div className="relative z-10">
-              <AppSidebar collapsed={false} onToggle={() => setMobileMenuOpen(false)} />
+              <AppSidebar collapsed={false} onToggle={() => setMobileMenuOpen(false)} onNavigate={() => setMobileMenuOpen(false)} />
             </div>
           </div>
         )}
