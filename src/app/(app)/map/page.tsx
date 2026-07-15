@@ -242,7 +242,7 @@ export default function MapPage() {
                   </div>
                   {place.photo_url && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={place.photo_url} alt={place.name} className="w-full h-20 object-cover rounded-lg mt-1.5" />
+                    <img src={place.photo_url} alt={place.name} loading="lazy" decoding="async" className="w-full h-20 object-cover rounded-lg mt-1.5" />
                   )}
                   <p className="text-sm font-medium text-gray-100 truncate mt-1.5">{place.name}</p>
                   {place.rating ? (
