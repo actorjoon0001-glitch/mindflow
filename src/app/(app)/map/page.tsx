@@ -105,8 +105,9 @@ export default function MapPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-3 animate-fade-in">
-      {/* Map with floating search (카카오맵 스타일) */}
-      <div className="relative rounded-2xl overflow-hidden h-[68vh] shadow-lg">
+      {/* Map with floating search (카카오맵 스타일)
+          isolate: Leaflet 내부의 높은 z-index가 저장 폼(Dialog)을 덮지 않도록 스택 컨텍스트 격리 */}
+      <div className="relative isolate rounded-2xl overflow-hidden h-[68vh] shadow-lg">
         <CoupleMap
           places={places}
           focus={focus}
