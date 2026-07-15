@@ -10,6 +10,7 @@ import { NotificationBanner } from '@/components/notifications/notification-bann
 import { BossKey } from '@/components/boss/boss-key';
 import { AppLock } from '@/components/lock/app-lock';
 import { ChatNotifier } from '@/components/chat/chat-notifier';
+import { PushAutoSubscribe } from '@/components/notifications/push-auto-subscribe';
 import { cn } from '@/lib/utils';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -22,6 +23,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <BossKey />
       <AppLock />
       <ChatNotifier />
+      <PushAutoSubscribe />
       <CoupleGate>
       <div className="min-h-screen bg-surface">
         {/* Desktop sidebar */}

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Heart, Calendar, Map, MessageCircle, Sparkles, LayoutGrid } from 'lucide-react';
+import { Heart, Calendar, Map, MessageCircle, Images, LayoutGrid } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSkin } from '@/stores/skin';
 
@@ -10,8 +10,8 @@ const items = [
   { label: '홈', href: '/dashboard', Icon: Heart },
   { label: '캘린더', href: '/calendar', Icon: Calendar },
   { label: '지도', href: '/map', Icon: Map },
+  { label: '사진첩', href: '/album', Icon: Images },
   { label: '채팅', href: '/chat', Icon: MessageCircle },
-  { label: 'AI', href: '/assistant', Icon: Sparkles },
 ];
 
 export function MobileNav() {
