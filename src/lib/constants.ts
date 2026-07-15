@@ -36,9 +36,13 @@ export const COUPLE_EVENT_CATEGORIES: Record<string, { label: string; color: str
 export const COUPLE_PLACE_CATEGORIES: Record<string, { label: string; emoji: string; color: string }> = {
   restaurant: { label: '맛집', emoji: '🍽️', color: '#f97316' },
   cafe: { label: '카페', emoji: '☕', color: '#a16207' },
-  activity: { label: '액티비티', emoji: '🎡', color: '#8b5cf6' },
+  date: { label: '데이트', emoji: '💕', color: '#ec4899' },
+  culture: { label: '공연·전시', emoji: '🎭', color: '#8b5cf6' },
+  activity: { label: '액티비티', emoji: '🎡', color: '#22c55e' },
   travel: { label: '여행', emoji: '✈️', color: '#06b6d4' },
-  etc: { label: '기타', emoji: '📍', color: '#ec4899' },
+  shopping: { label: '쇼핑', emoji: '🛍️', color: '#eab308' },
+  nature: { label: '자연·산책', emoji: '🌳', color: '#16a34a' },
+  etc: { label: '기타', emoji: '📍', color: '#64748b' },
 };
 
 export const BUCKET_CATEGORIES: Record<string, { label: string; emoji: string }> = {

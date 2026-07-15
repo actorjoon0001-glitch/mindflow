@@ -2,10 +2,9 @@
 
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
-import { MapPin, Plus, Search, Trash2, Star, Loader2 } from 'lucide-react';
+import { MapPin, Plus, Search, Trash2, Star, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
 import { Dialog } from '@/components/ui/dialog';
 import { useCouplePlaces } from '@/hooks/use-couple-places';
 import { cn } from '@/lib/utils';
@@ -34,7 +33,7 @@ export default function MapPage() {
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [memo, setMemo] = useState('');
-  const [category, setCategory] = useState<CouplePlaceCategory>('restaurant');
+  const [category, setCategory] = useState<CouplePlaceCategory>('date');
   const [rating, setRating] = useState(0);
   const [visitedDate, setVisitedDate] = useState('');
   const [saving, setSaving] = useState(false);
@@ -53,7 +52,7 @@ export default function MapPage() {
   };
 
   const resetForm = () => {
-    setName(''); setAddress(''); setMemo(''); setCategory('restaurant');
+    setName(''); setAddress(''); setMemo(''); setCategory('date');
     setRating(0); setVisitedDate(''); setPending(null);
   };
 
@@ -105,102 +104,110 @@ export default function MapPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-4 animate-fade-in">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-100 flex items-center gap-2">
-            <MapPin size={18} className="text-rose-400" /> 우리가 다녀온 곳
-          </h2>
-          <p className="text-xs text-gray-500 mt-0.5">지도를 움직여 중앙 ⊙ 에 맞추고 <span className="text-rose-300">여기에 기록</span>, 또는 장소 검색 ({places.length}곳)</p>
-        </div>
-        <div className="flex gap-2 w-full sm:w-auto">
-          <div className="flex-1 sm:w-64">
-            <div className="flex gap-2">
-              <Input
-                id="search"
-                placeholder="장소·주소 검색"
-                value={searchQ}
-                onChange={(e) => setSearchQ(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              />
-              <Button variant="secondary" size="icon" className="h-[42px] w-[42px] shrink-0" onClick={handleSearch} disabled={searching}>
-                {searching ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
-              </Button>
-            </div>
+    <div className="max-w-5xl mx-auto space-y-3 animate-fade-in">
+      {/* Map with floating search (카카오맵 스타일) */}
+      <div className="relative rounded-2xl overflow-hidden h-[68vh] shadow-lg">
+        <CoupleMap
+          places={places}
+          focus={focus}
+          pending={pending}
+          onPick={(lat, lng) => openForm(lat, lng)}
+        />
 
-            {/* 검색 결과 목록 — 선택하면 그 위치에 핀 + 기록 폼 */}
-            {searchResults.length > 0 && (
-              <div className="mt-2 rounded-lg border border-surface-300 bg-surface-100 overflow-hidden">
-                {searchResults.map((r, i) => (
-                  <button
-                    key={`${r.lat}-${r.lng}-${i}`}
-                    onClick={() => pickResult(r)}
-                    className="w-full text-left px-3 py-2 hover:bg-surface-200 transition-colors border-b border-surface-300 last:border-0"
-                  >
-                    <p className="text-sm text-gray-100 truncate">{r.name}</p>
-                    {r.address && <p className="text-xs text-gray-500 truncate">{r.address}</p>}
-                  </button>
-                ))}
-              </div>
+        {/* Floating search bar */}
+        <div className="absolute top-3 inset-x-3 z-[600]">
+          <div className="bg-white rounded-xl shadow-md flex items-center gap-2 pl-3 pr-1.5 h-11">
+            <Search size={17} className="text-gray-400 shrink-0" />
+            <input
+              value={searchQ}
+              onChange={(e) => setSearchQ(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              placeholder="장소·주소 검색 (예: 아스가르드)"
+              className="flex-1 min-w-0 bg-transparent text-sm text-gray-800 placeholder:text-gray-400 outline-none"
+            />
+            {searchQ && (
+              <button onClick={() => { setSearchQ(''); setSearchResults([]); setSearchError(''); }} className="text-gray-400 hover:text-gray-600 shrink-0">
+                <X size={16} />
+              </button>
             )}
+            <button
+              onClick={handleSearch}
+              disabled={searching}
+              className="shrink-0 h-8 px-3 rounded-lg bg-brand-600 text-white text-sm font-medium flex items-center gap-1 disabled:opacity-60"
+            >
+              {searching ? <Loader2 size={14} className="animate-spin" /> : '검색'}
+            </button>
           </div>
+
+          {/* 검색 결과 */}
+          {searchResults.length > 0 && (
+            <div className="mt-2 bg-white rounded-xl shadow-lg overflow-hidden max-h-72 overflow-y-auto">
+              {searchResults.map((r, i) => (
+                <button
+                  key={`${r.lat}-${r.lng}-${i}`}
+                  onClick={() => pickResult(r)}
+                  className="w-full text-left px-3 py-2.5 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0 flex items-start gap-2"
+                >
+                  <MapPin size={15} className="text-brand-500 mt-0.5 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm text-gray-800 font-medium truncate">{r.name}</p>
+                    {r.address && <p className="text-xs text-gray-500 truncate">{r.address}</p>}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+          {searchError && (
+            <div className="mt-2 bg-white rounded-lg shadow px-3 py-2 text-xs text-amber-600">{searchError}</div>
+          )}
         </div>
       </div>
-      {searchError && <p className="text-xs text-amber-400">{searchError}</p>}
 
-      <div className="grid lg:grid-cols-[1fr_300px] gap-4">
-        <Card className="p-2 h-[48vh] lg:h-[70vh]">
-          <CoupleMap
-            places={places}
-            focus={focus}
-            pending={pending}
-            onPick={(lat, lng) => openForm(lat, lng)}
-          />
-        </Card>
-
-        <div className="space-y-3 lg:h-[70vh] lg:overflow-y-auto pr-1">
-          {loading ? (
-            <div className="flex justify-center py-8"><Loader2 className="animate-spin text-gray-600" size={20} /></div>
-          ) : places.length === 0 ? (
-            <Card className="text-center py-8">
-              <MapPin size={28} className="mx-auto mb-2 text-gray-600" />
-              <p className="text-sm text-gray-500">아직 기록된 장소가 없어요.<br />지도를 눌러 첫 추억을 남겨보세요!</p>
-            </Card>
-          ) : (
-            places.map((place) => {
+      {/* Saved places */}
+      <div>
+        <p className="text-xs text-gray-500 mb-2 px-1">우리가 다녀온 곳 · {places.length}곳</p>
+        {loading ? (
+          <div className="flex justify-center py-4"><Loader2 className="animate-spin text-gray-600" size={20} /></div>
+        ) : places.length === 0 ? (
+          <p className="text-center py-4 text-sm text-gray-600">지도를 움직여 중앙 ⊙ 에 맞추고 <span className="text-rose-300">여기에 기록</span> 하거나, 위에서 검색해보세요!</p>
+        ) : (
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {places.map((place) => {
               const cat = COUPLE_PLACE_CATEGORIES[place.category] || COUPLE_PLACE_CATEGORIES.etc;
               return (
-                <Card
+                <div
                   key={place.id}
-                  hover
-                  className={cn('p-3 group', focus?.id === place.id && 'ring-1 ring-rose-500')}
                   onClick={() => setFocus(place)}
+                  className={cn(
+                    'shrink-0 w-44 cursor-pointer rounded-xl border bg-surface-50 p-3 group transition-all',
+                    focus?.id === place.id ? 'border-rose-500 ring-1 ring-rose-500' : 'border-surface-300 hover:border-surface-400',
+                  )}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-100 truncate">{cat.emoji} {place.name}</p>
-                      {place.rating ? (
-                        <div className="flex gap-0.5 mt-0.5">
-                          {Array.from({ length: place.rating }).map((_, i) => (
-                            <Star key={i} size={11} className="text-amber-400" fill="currentColor" />
-                          ))}
-                        </div>
-                      ) : null}
-                      {place.visited_date && <p className="text-[11px] text-gray-500 mt-0.5">{place.visited_date}</p>}
-                      {place.memo && <p className="text-xs text-gray-400 mt-1 line-clamp-2">{place.memo}</p>}
-                    </div>
+                  <div className="flex items-start justify-between gap-1">
+                    <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-full text-white" style={{ backgroundColor: cat.color }}>
+                      {cat.emoji} {cat.label}
+                    </span>
                     <button
                       onClick={(e) => { e.stopPropagation(); deletePlace(place.id); }}
                       className="text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all shrink-0"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={13} />
                     </button>
                   </div>
-                </Card>
+                  <p className="text-sm font-medium text-gray-100 truncate mt-1.5">{place.name}</p>
+                  {place.rating ? (
+                    <div className="flex gap-0.5 mt-0.5">
+                      {Array.from({ length: place.rating }).map((_, i) => (
+                        <Star key={i} size={10} className="text-amber-400" fill="currentColor" />
+                      ))}
+                    </div>
+                  ) : null}
+                  {place.visited_date && <p className="text-[11px] text-gray-500 mt-0.5">{place.visited_date}</p>}
+                </div>
               );
-            })
-          )}
-        </div>
+            })}
+          </div>
+        )}
       </div>
 
       {/* Add place dialog */}
