@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
-import { ImagePlus, Loader2, Trash2, X, Images } from 'lucide-react';
+import { ImagePlus, Loader2, Trash2, X, Images, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useCoupleAlbum, type AlbumPhoto } from '@/hooks/use-couple-album';
@@ -16,6 +16,24 @@ export default function AlbumPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [err, setErr] = useState('');
   const [viewer, setViewer] = useState<AlbumPhoto | null>(null);
+
+  const [savingImg, setSavingImg] = useState(false);
+  const saveImage = async (url: string) => {
+    setSavingImg(true);
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const objUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objUrl;
+      a.download = `photo_${Date.now()}.jpg`;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(objUrl);
+    } catch {
+      window.open(url, '_blank');
+    }
+    setSavingImg(false);
+  };
 
   const handleDelete = async () => {
     if (!viewer) return;
@@ -104,6 +122,13 @@ export default function AlbumPage() {
               {new Date(viewer.date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
               {viewer.source === 'chat' ? ' · 채팅 사진' : viewer.source === 'place' ? ` · 지도${viewer.caption ? ` · ${viewer.caption}` : ''}` : ''}
             </span>
+            <button
+              onClick={() => saveImage(viewer.url)}
+              disabled={savingImg}
+              className="flex items-center gap-1 text-sm text-white/80 hover:text-white disabled:opacity-60"
+            >
+              {savingImg ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} 저장
+            </button>
             <button
               onClick={handleDelete}
               className="flex items-center gap-1 text-sm text-red-400 hover:text-red-300"

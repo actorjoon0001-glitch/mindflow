@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { MapPin, Plus, Search, Trash2, Star, Loader2, X, ImagePlus, Pencil } from 'lucide-react';
+import { MapPin, Plus, Search, Trash2, Star, Loader2, X, ImagePlus, Pencil, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog } from '@/components/ui/dialog';
@@ -38,6 +38,29 @@ export default function MapPage() {
   const [focus, setFocus] = useState<CouplePlace | null>(null);
   const [pending, setPending] = useState<{ lat: number; lng: number } | null>(null);
   const [showForm, setShowForm] = useState(false);
+
+  // 사진 미리보기(라이트박스)
+  const [viewer, setViewer] = useState<{ photos: string[]; index: number; name: string } | null>(null);
+  const [saving2, setSaving2] = useState(false);
+
+  const saveImage = async (url: string, name: string) => {
+    setSaving2(true);
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const objUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objUrl;
+      a.download = `${(name || 'photo').replace(/[^\w가-힣]/g, '_')}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(objUrl);
+    } catch {
+      window.open(url, '_blank'); // 실패 시 새 탭에서 열기(길게 눌러 저장)
+    }
+    setSaving2(false);
+  };
 
   // form
   const [name, setName] = useState('');
@@ -319,7 +342,11 @@ export default function MapPage() {
                     const pics = placePhotos(place);
                     if (!pics.length) return null;
                     return (
-                      <div className="relative mt-1.5">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setViewer({ photos: pics, index: 0, name: place.name }); }}
+                        className="relative mt-1.5 block w-full"
+                        title="사진 크게 보기"
+                      >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={pics[0]} alt={place.name} loading="lazy" decoding="async" className="w-full h-20 object-cover rounded-lg" />
                         {pics.length > 1 && (
@@ -327,7 +354,7 @@ export default function MapPage() {
                             <ImagePlus size={9} /> {pics.length}
                           </span>
                         )}
-                      </div>
+                      </button>
                     );
                   })()}
                   <p className="text-sm font-medium text-gray-100 truncate mt-1.5">{place.name}</p>
@@ -444,6 +471,50 @@ export default function MapPage() {
           </div>
         </div>
       </Dialog>
+
+      {/* 사진 미리보기(라이트박스) + 저장 */}
+      {viewer && (
+        <div
+          className="fixed inset-0 z-[9998] bg-black/90 flex flex-col items-center justify-center p-4"
+          onClick={() => setViewer(null)}
+        >
+          <button className="absolute top-4 right-4 text-white/80 hover:text-white z-10" onClick={() => setViewer(null)}>
+            <X size={26} />
+          </button>
+
+          <div className="relative flex items-center justify-center w-full" onClick={(e) => e.stopPropagation()}>
+            {viewer.photos.length > 1 && (
+              <button
+                onClick={() => setViewer((v) => v && ({ ...v, index: (v.index - 1 + v.photos.length) % v.photos.length }))}
+                className="absolute left-1 sm:left-4 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center"
+                aria-label="이전 사진"
+              ><ChevronLeft size={22} /></button>
+            )}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={viewer.photos[viewer.index]} alt={viewer.name} className="max-w-full max-h-[76vh] object-contain rounded-lg" />
+            {viewer.photos.length > 1 && (
+              <button
+                onClick={() => setViewer((v) => v && ({ ...v, index: (v.index + 1) % v.photos.length }))}
+                className="absolute right-1 sm:right-4 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center"
+                aria-label="다음 사진"
+              ><ChevronRight size={22} /></button>
+            )}
+          </div>
+
+          <div className="mt-3 flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
+            <span className="text-sm text-white/80">
+              {viewer.name}{viewer.photos.length > 1 ? ` · ${viewer.index + 1}/${viewer.photos.length}` : ''}
+            </span>
+            <button
+              onClick={() => saveImage(viewer.photos[viewer.index], viewer.name)}
+              disabled={saving2}
+              className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-white/90 text-gray-800 font-medium disabled:opacity-60"
+            >
+              {saving2 ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} 저장
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
