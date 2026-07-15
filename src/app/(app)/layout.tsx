@@ -11,6 +11,7 @@ import { BossKey } from '@/components/boss/boss-key';
 import { AppLock } from '@/components/lock/app-lock';
 import { ChatNotifier } from '@/components/chat/chat-notifier';
 import { PushAutoSubscribe } from '@/components/notifications/push-auto-subscribe';
+import { IosPushGuide } from '@/components/notifications/ios-push-guide';
 import { cn } from '@/lib/utils';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -53,6 +54,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           sidebarCollapsed ? 'lg:pl-[68px]' : 'lg:pl-[240px]'
         )}>
           <Header onMenuToggle={() => setMobileMenuOpen(true)} />
+          <IosPushGuide />
           <NotificationBanner />
           <main className="p-4 lg:p-6 pb-24 lg:pb-6 min-h-[calc(100vh-4rem)]">
             {children}
