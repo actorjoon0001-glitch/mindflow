@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import {
-  Send, Sparkles, User, Trash2, Loader2, Mic, MicOff, Heart, CalendarHeart,
+  Send, Sparkles, User, Trash2, Loader2, Mic, MicOff, Heart, CalendarHeart, MessageCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 export default function AssistantPage() {
   const { messages, loading, initialLoading, sendMessage, clearChat } = useChat();
   const [input, setInput] = useState('');
+  const [useChatCtx, setUseChatCtx] = useState(true); // 우리 채팅 참고해서 추천
   const [isListening, setIsListening] = useState(false);
   const [recap, setRecap] = useState<{ label: string; text: string } | null>(null);
   const [recapLoading, setRecapLoading] = useState(false);
@@ -80,7 +81,7 @@ export default function AssistantPage() {
     }
     const msg = input;
     setInput('');
-    await sendMessage(msg);
+    await sendMessage(msg, useChatCtx);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -92,6 +93,7 @@ export default function AssistantPage() {
 
   const suggestions = [
     '이번 주말 데이트 코스 추천해줘',
+    '우리 대화 보고 데이트 코스 추천해줘',
     '분위기 좋은 맛집 추천해줘',
     '다가오는 기념일 알려줘',
     '토요일 저녁 7시 데이트 일정 잡아줘',
@@ -111,6 +113,16 @@ export default function AssistantPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setUseChatCtx((v) => !v)}
+            className={cn(
+              'text-xs px-2.5 py-1.5 rounded-lg border transition-colors flex items-center gap-1',
+              useChatCtx ? 'bg-rose-500/15 border-rose-500/40 text-rose-300' : 'border-surface-300 text-gray-500',
+            )}
+            title="우리 채팅 내용을 참고해서 추천해요"
+          >
+            <MessageCircle size={13} /> 채팅 참고 {useChatCtx ? 'ON' : 'OFF'}
+          </button>
           <Button variant="outline" size="sm" onClick={loadRecap} loading={recapLoading}>
             <CalendarHeart size={14} /> 이번 달 정리
           </Button>

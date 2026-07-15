@@ -24,6 +24,7 @@ export interface CoupleContext {
   anniversaryDate?: string;
   upcomingEvents?: string[];
   recentPlaces?: string[];
+  recentChat?: string[]; // 최근 둘의 채팅 (오래된→최신)
 }
 
 export interface ChatRequest {

@@ -28,7 +28,7 @@ export function useChat() {
     fetchMessages();
   }, [fetchMessages]);
 
-  const sendMessage = async (content: string) => {
+  const sendMessage = async (content: string, includeChat = true) => {
     if (!user || !content.trim()) return;
     setLoading(true);
 
@@ -47,7 +47,7 @@ export function useChat() {
     const res = await fetch('/api/ai/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: content }),
+      body: JSON.stringify({ message: content, includeChat }),
     });
     const response = await res.json();
 
