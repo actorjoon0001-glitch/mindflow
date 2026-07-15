@@ -46,10 +46,15 @@ export async function POST(request: NextRequest) {
       if (membership) {
         coupleId = membership.couple_id;
         const nowIso = new Date().toISOString();
-        const [{ data: couple }, { data: events }, { data: places }] = await Promise.all([
+        // 채팅 참고는 기본 켜짐(사용자 요청). body.includeChat === false 로 끌 수 있음.
+        const includeChat = body.includeChat !== false;
+        const [{ data: couple }, { data: events }, { data: places }, { data: chat }] = await Promise.all([
           supabase.from('couples').select('couple_name, anniversary_date').eq('id', coupleId).maybeSingle(),
           supabase.from('couple_events').select('title, start_time, location').eq('couple_id', coupleId).gte('start_time', nowIso).order('start_time', { ascending: true }).limit(8),
           supabase.from('couple_places').select('name, category').eq('couple_id', coupleId).order('created_at', { ascending: false }).limit(8),
+          includeChat
+            ? supabase.from('couple_messages').select('sender_id, content, created_at').eq('couple_id', coupleId).not('content', 'eq', '').order('created_at', { ascending: false }).limit(40)
+            : Promise.resolve({ data: null }),
         ]);
 
         if (couple) {
@@ -61,6 +66,13 @@ export async function POST(request: NextRequest) {
           (e) => `${new Date(e.start_time).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })} ${e.title}${e.location ? ` @${e.location}` : ''}`,
         );
         coupleContext.recentPlaces = (places || []).map((p) => p.name);
+        // 최근 채팅 (오래된→최신), 발화자는 '나'/'상대'로만 표시.
+        if (chat && chat.length) {
+          coupleContext.recentChat = chat
+            .slice()
+            .reverse()
+            .map((m) => `${m.sender_id === user.id ? '나' : '상대'}: ${(m.content || '').slice(0, 200)}`);
+        }
       }
     }
 

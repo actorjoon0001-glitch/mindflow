@@ -127,6 +127,10 @@ ${c?.anniversaryDate ? `사귄 날: ${c.anniversaryDate}` : ''}
       let ctx = '';
       if (c.upcomingEvents?.length) ctx += `\n다가오는 우리 일정: ${c.upcomingEvents.join(', ')}`;
       if (c.recentPlaces?.length) ctx += `\n최근 다녀온 곳: ${c.recentPlaces.join(', ')}`;
+      if (c.recentChat?.length) {
+        ctx += `\n\n최근 둘의 대화 (참고용, 오래된→최신):\n${c.recentChat.join('\n')}`;
+        ctx += `\n→ 위 대화에서 둘이 관심 있어 하거나 가고 싶어 한 것, 최근 화제를 반영해 추천에 자연스럽게 녹여주세요. 단, 대화 내용을 그대로 옮기거나 사생활을 캐묻지 말고 센스있게 활용만 하세요.`;
+      }
       if (ctx) messages.push({ role: 'system', content: `우리 커플 컨텍스트:${ctx}` });
     }
 
