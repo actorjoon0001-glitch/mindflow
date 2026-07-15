@@ -64,11 +64,33 @@ export function useCoupleAlbum() {
     return null;
   };
 
+  // 여러 장을 한 번에 업로드. 성공/실패 개수와 실패 사유(있으면 첫 사유)를 반환.
+  const uploadPhotos = async (files: File[]): Promise<{ ok: number; failed: number; reason?: string }> => {
+    if (!couple || !user) return { ok: 0, failed: files.length, reason: '로그인이 필요해요.' };
+    setUploading(true);
+    const supabase = createClient();
+    let ok = 0, failed = 0, reason: string | undefined;
+    for (const file of files) {
+      if (!file.type.startsWith('image/')) { failed++; reason ||= '이미지 파일만 올릴 수 있어요.'; continue; }
+      if (file.size > 10 * 1024 * 1024) { failed++; reason ||= '10MB 이하 이미지만 올릴 수 있어요.'; continue; }
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+      const path = `${couple.id}/album/${crypto.randomUUID()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('chat-images').upload(path, file, { contentType: file.type });
+      if (upErr) { failed++; reason ||= '일부 사진 업로드에 실패했어요.'; continue; }
+      const { data: pub } = supabase.storage.from('chat-images').getPublicUrl(path);
+      await supabase.from('couple_photos').insert({ couple_id: couple.id, created_by: user.id, url: pub.publicUrl });
+      ok++;
+    }
+    await fetchPhotos();
+    setUploading(false);
+    return { ok, failed, reason };
+  };
+
   const deletePhoto = async (id: string) => {
     const supabase = createClient();
     await supabase.from('couple_photos').delete().eq('id', id);
     setPhotos((prev) => prev.filter((p) => p.id !== id));
   };
 
-  return { photos, loading, uploading, uploadPhoto, deletePhoto };
+  return { photos, loading, uploading, uploadPhoto, uploadPhotos, deletePhoto };
 }

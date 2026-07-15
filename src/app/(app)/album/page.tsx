@@ -12,7 +12,7 @@ function monthLabel(iso: string) {
 }
 
 export default function AlbumPage() {
-  const { photos, loading, uploading, uploadPhoto, deletePhoto } = useCoupleAlbum();
+  const { photos, loading, uploading, uploadPhotos, deletePhoto } = useCoupleAlbum();
   const fileRef = useRef<HTMLInputElement>(null);
   const [err, setErr] = useState('');
   const [viewer, setViewer] = useState<AlbumPhoto | null>(null);
@@ -24,12 +24,12 @@ export default function AlbumPage() {
   }, [photos]);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const files = Array.from(e.target.files || []);
     e.target.value = '';
-    if (!file) return;
+    if (!files.length) return;
     setErr('');
-    const reason = await uploadPhoto(file);
-    if (reason) setErr(reason);
+    const { failed, reason } = await uploadPhotos(files);
+    if (failed && reason) setErr(reason);
   };
 
   return (
@@ -41,7 +41,7 @@ export default function AlbumPage() {
           </h2>
           <p className="text-xs text-gray-500 mt-0.5">앨범에 올린 사진 + 채팅 사진을 월별로 모아봐요 ({photos.length}장)</p>
         </div>
-        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+        <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFile} />
         <Button onClick={() => fileRef.current?.click()} loading={uploading}>
           <ImagePlus size={16} /> 사진 올리기
         </Button>

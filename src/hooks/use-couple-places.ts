@@ -35,7 +35,8 @@ export function useCouplePlaces() {
   const createPlace = async (data: {
     name: string; lat: number; lng: number;
     address?: string; memo?: string; category?: CouplePlace['category'];
-    rating?: number | null; visited_date?: string | null; photo_url?: string | null;
+    rating?: number | null; visited_date?: string | null;
+    photo_url?: string | null; photos?: string[];
   }) => {
     if (!couple || !user) return null;
     const supabase = createClient();
@@ -48,11 +49,27 @@ export function useCouplePlaces() {
     return place;
   };
 
+  const updatePlace = async (id: string, data: {
+    name?: string; address?: string | null; memo?: string | null;
+    category?: CouplePlace['category']; rating?: number | null;
+    visited_date?: string | null; photo_url?: string | null; photos?: string[];
+  }) => {
+    const supabase = createClient();
+    const { data: place } = await supabase
+      .from('couple_places')
+      .update(data)
+      .eq('id', id)
+      .select()
+      .single();
+    if (place) setPlaces((prev) => prev.map((p) => (p.id === id ? place : p)));
+    return place;
+  };
+
   const deletePlace = async (id: string) => {
     const supabase = createClient();
     await supabase.from('couple_places').delete().eq('id', id);
     setPlaces((prev) => prev.filter((p) => p.id !== id));
   };
 
-  return { places, loading, fetchPlaces, createPlace, deletePlace };
+  return { places, loading, fetchPlaces, createPlace, updatePlace, deletePlace };
 }

@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { MapPin, Plus, Search, Trash2, Star, Loader2, X, ImagePlus } from 'lucide-react';
+import { MapPin, Plus, Search, Trash2, Star, Loader2, X, ImagePlus, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog } from '@/components/ui/dialog';
@@ -25,8 +25,14 @@ const CoupleMap = dynamic(() => import('@/components/map/couple-map'), {
 
 const CATEGORY_KEYS = Object.keys(COUPLE_PLACE_CATEGORIES) as CouplePlaceCategory[];
 
+// 장소의 사진 목록 (photos 배열 우선, 없으면 기존 photo_url 로 대체).
+function placePhotos(p: CouplePlace): string[] {
+  if (p.photos && p.photos.length) return p.photos;
+  return p.photo_url ? [p.photo_url] : [];
+}
+
 export default function MapPage() {
-  const { places, loading, createPlace, deletePlace } = useCouplePlaces();
+  const { places, loading, createPlace, updatePlace, deletePlace } = useCouplePlaces();
   const couple = useAuthStore((s) => s.couple);
   const [focus, setFocus] = useState<CouplePlace | null>(null);
   const [pending, setPending] = useState<{ lat: number; lng: number } | null>(null);
@@ -41,25 +47,41 @@ export default function MapPage() {
   const [visitedDate, setVisitedDate] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // photo attach
+  // edit / photos (여러 장)
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [existingPhotos, setExistingPhotos] = useState<string[]>([]); // 이미 저장된 URL (수정 시 유지)
+  const [newPhotos, setNewPhotos] = useState<{ file: File; preview: string }[]>([]); // 새로 고른 파일
   const [photoError, setPhotoError] = useState('');
 
-  const pickPhoto = (file: File | null) => {
+  const pickPhotos = (files: File[]) => {
     setPhotoError('');
-    if (!file) return;
-    if (!file.type.startsWith('image/')) { setPhotoError('이미지 파일만 올릴 수 있어요.'); return; }
-    if (file.size > 10 * 1024 * 1024) { setPhotoError('10MB 이하 이미지만 올릴 수 있어요.'); return; }
-    setPhotoFile(file);
-    setPhotoPreview((prev) => { if (prev) URL.revokeObjectURL(prev); return URL.createObjectURL(file); });
+    const valid: { file: File; preview: string }[] = [];
+    for (const file of files) {
+      if (!file.type.startsWith('image/')) { setPhotoError('이미지 파일만 올릴 수 있어요.'); continue; }
+      if (file.size > 10 * 1024 * 1024) { setPhotoError('10MB 이하 이미지만 올릴 수 있어요.'); continue; }
+      valid.push({ file, preview: URL.createObjectURL(file) });
+    }
+    if (valid.length) setNewPhotos((prev) => [...prev, ...valid]);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const clearPhoto = () => {
+  const removeNewPhoto = (idx: number) => {
+    setNewPhotos((prev) => {
+      const target = prev[idx];
+      if (target) URL.revokeObjectURL(target.preview);
+      return prev.filter((_, i) => i !== idx);
+    });
+  };
+
+  const removeExistingPhoto = (url: string) => {
+    setExistingPhotos((prev) => prev.filter((u) => u !== url));
+  };
+
+  const clearPhotos = () => {
     setPhotoError('');
-    setPhotoFile(null);
-    setPhotoPreview((prev) => { if (prev) URL.revokeObjectURL(prev); return null; });
+    setExistingPhotos([]);
+    setNewPhotos((prev) => { prev.forEach((n) => URL.revokeObjectURL(n.preview)); return []; });
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -79,7 +101,24 @@ export default function MapPage() {
   const resetForm = () => {
     setName(''); setAddress(''); setMemo(''); setCategory('date');
     setRating(0); setVisitedDate(''); setPending(null);
-    clearPhoto();
+    setEditingId(null);
+    clearPhotos();
+  };
+
+  // 기존 장소 수정: 폼을 그 장소 값으로 채워서 연다.
+  const openEdit = (place: CouplePlace) => {
+    setEditingId(place.id);
+    setName(place.name);
+    setAddress(place.address || '');
+    setMemo(place.memo || '');
+    setCategory(place.category);
+    setRating(place.rating || 0);
+    setVisitedDate(place.visited_date || '');
+    setPending({ lat: place.lat, lng: place.lng });
+    setExistingPhotos(placePhotos(place));
+    setNewPhotos([]);
+    setPhotoError('');
+    setShowForm(true);
   };
 
   const pickResult = (r: GeoResult) => {
@@ -112,37 +151,59 @@ export default function MapPage() {
   };
 
   const handleSave = async () => {
-    if (!name.trim() || !pending) return;
+    if (!name.trim()) return;
+    if (!editingId && !pending) return;
     setSaving(true);
 
-    // 사진이 첨부됐으면 먼저 스토리지에 업로드하고 공개 URL을 얻는다.
-    let photoUrl: string | null = null;
-    if (photoFile && couple) {
+    // 새로 고른 사진들을 스토리지에 업로드하고 공개 URL을 모은다.
+    const uploadedUrls: string[] = [];
+    if (newPhotos.length && couple) {
       const supabase = createClient();
-      const ext = (photoFile.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
-      const path = `${couple.id}/places/${crypto.randomUUID()}.${ext}`;
-      const { error: upErr } = await supabase.storage
-        .from('chat-images')
-        .upload(path, photoFile, { contentType: photoFile.type, upsert: false });
-      if (upErr) {
-        setPhotoError('사진 업로드에 실패했어요. 사진 없이 저장할게요.');
-      } else {
-        const { data: pub } = supabase.storage.from('chat-images').getPublicUrl(path);
-        photoUrl = pub.publicUrl;
+      for (const { file } of newPhotos) {
+        const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+        const path = `${couple.id}/places/${crypto.randomUUID()}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from('chat-images')
+          .upload(path, file, { contentType: file.type, upsert: false });
+        if (!upErr) {
+          const { data: pub } = supabase.storage.from('chat-images').getPublicUrl(path);
+          uploadedUrls.push(pub.publicUrl);
+        }
+      }
+      if (uploadedUrls.length < newPhotos.length) {
+        setPhotoError('일부 사진 업로드에 실패했어요.');
       }
     }
 
-    await createPlace({
-      name,
-      lat: pending.lat,
-      lng: pending.lng,
-      address: address || undefined,
-      memo: memo || undefined,
-      category,
-      rating: rating || null,
-      visited_date: visitedDate || null,
-      photo_url: photoUrl,
-    });
+    // 유지할 기존 사진 + 새로 올린 사진. photo_url 은 호환을 위해 첫 사진으로.
+    const finalPhotos = [...existingPhotos, ...uploadedUrls];
+    const photoUrl = finalPhotos[0] ?? null;
+
+    if (editingId) {
+      await updatePlace(editingId, {
+        name,
+        address: address || null,
+        memo: memo || null,
+        category,
+        rating: rating || null,
+        visited_date: visitedDate || null,
+        photos: finalPhotos,
+        photo_url: photoUrl,
+      });
+    } else if (pending) {
+      await createPlace({
+        name,
+        lat: pending.lat,
+        lng: pending.lng,
+        address: address || undefined,
+        memo: memo || undefined,
+        category,
+        rating: rating || null,
+        visited_date: visitedDate || null,
+        photos: finalPhotos,
+        photo_url: photoUrl,
+      });
+    }
     setSaving(false);
     setShowForm(false);
     resetForm();
@@ -233,17 +294,38 @@ export default function MapPage() {
                     <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-full text-white" style={{ backgroundColor: cat.color }}>
                       {cat.emoji} {cat.label}
                     </span>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); deletePlace(place.id); }}
-                      className="text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all shrink-0"
-                    >
-                      <Trash2 size={13} />
-                    </button>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); openEdit(place); }}
+                        className="text-gray-600 hover:text-brand-400 opacity-0 group-hover:opacity-100 transition-all"
+                        title="수정"
+                      >
+                        <Pencil size={13} />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); deletePlace(place.id); }}
+                        className="text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                        title="삭제"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   </div>
-                  {place.photo_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={place.photo_url} alt={place.name} loading="lazy" decoding="async" className="w-full h-20 object-cover rounded-lg mt-1.5" />
-                  )}
+                  {(() => {
+                    const pics = placePhotos(place);
+                    if (!pics.length) return null;
+                    return (
+                      <div className="relative mt-1.5">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={pics[0]} alt={place.name} loading="lazy" decoding="async" className="w-full h-20 object-cover rounded-lg" />
+                        {pics.length > 1 && (
+                          <span className="absolute bottom-1 right-1 text-[10px] px-1.5 py-0.5 rounded-full bg-black/60 text-white flex items-center gap-0.5">
+                            <ImagePlus size={9} /> {pics.length}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
                   <p className="text-sm font-medium text-gray-100 truncate mt-1.5">{place.name}</p>
                   {place.rating ? (
                     <div className="flex gap-0.5 mt-0.5">
@@ -260,8 +342,8 @@ export default function MapPage() {
         )}
       </div>
 
-      {/* Add place dialog */}
-      <Dialog open={showForm} onClose={() => { setShowForm(false); resetForm(); }} title="이곳을 기록하기">
+      {/* Add / edit place dialog */}
+      <Dialog open={showForm} onClose={() => { setShowForm(false); resetForm(); }} title={editingId ? '장소 수정하기' : '이곳을 기록하기'}>
         <div className="space-y-4">
           <Input id="placeName" label="장소 이름" placeholder="예) 성수 감성 카페" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
           <div className="space-y-1.5">
@@ -302,40 +384,59 @@ export default function MapPage() {
             />
           </div>
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-gray-300">사진 (선택)</label>
+            <label className="block text-sm font-medium text-gray-300">사진 (선택 · 여러 장 가능)</label>
             <input
               ref={fileInputRef}
               type="file"
               accept="image/*"
+              multiple
               className="hidden"
-              onChange={(e) => pickPhoto(e.target.files?.[0] ?? null)}
+              onChange={(e) => pickPhotos(Array.from(e.target.files || []))}
             />
-            {photoPreview ? (
-              <div className="relative w-full">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={photoPreview} alt="첨부 사진 미리보기" className="w-full max-h-52 object-cover rounded-lg border border-surface-300" />
-                <button
-                  onClick={clearPhoto}
-                  className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 text-white flex items-center justify-center"
-                  aria-label="사진 제거"
-                >
-                  <X size={15} />
-                </button>
+            {(existingPhotos.length > 0 || newPhotos.length > 0) && (
+              <div className="grid grid-cols-3 gap-2">
+                {existingPhotos.map((url) => (
+                  <div key={url} className="relative aspect-square">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt="사진" className="w-full h-full object-cover rounded-lg border border-surface-300" />
+                    <button
+                      onClick={() => removeExistingPhoto(url)}
+                      className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center"
+                      aria-label="사진 제거"
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
+                ))}
+                {newPhotos.map((n, idx) => (
+                  <div key={n.preview} className="relative aspect-square">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={n.preview} alt="첨부 미리보기" className="w-full h-full object-cover rounded-lg border border-surface-300" />
+                    <button
+                      onClick={() => removeNewPhoto(idx)}
+                      className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center"
+                      aria-label="사진 제거"
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
+                ))}
               </div>
-            ) : (
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-lg border border-dashed border-surface-400 text-sm text-gray-400 hover:bg-surface-200 transition-colors"
-              >
-                <ImagePlus size={16} /> 사진 올리기
-              </button>
             )}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-lg border border-dashed border-surface-400 text-sm text-gray-400 hover:bg-surface-200 transition-colors"
+            >
+              <ImagePlus size={16} /> 사진 추가
+            </button>
             {photoError && <p className="text-xs text-amber-400">{photoError}</p>}
           </div>
           {address && <p className="text-xs text-gray-500">📍 {address}</p>}
           <div className="flex justify-end gap-2">
             <Button variant="ghost" onClick={() => { setShowForm(false); resetForm(); }}>취소</Button>
-            <Button onClick={handleSave} loading={saving}><Plus size={16} /> 저장</Button>
+            <Button onClick={handleSave} loading={saving}>
+              {editingId ? <><Pencil size={16} /> 수정 저장</> : <><Plus size={16} /> 저장</>}
+            </Button>
           </div>
         </div>
       </Dialog>
