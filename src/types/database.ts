@@ -228,6 +228,16 @@ export interface CoupleMood {
   updated_at: string;
 }
 
+export interface CouplePhoto {
+  id: string;
+  couple_id: string;
+  created_by: string | null;
+  url: string;
+  caption: string | null;
+  taken_date: string | null;
+  created_at: string;
+}
+
 export interface PushSubscriptionRow {
   id: string;
   user_id: string;
@@ -323,6 +333,11 @@ export interface Database {
         Row: PushSubscriptionRow;
         Insert: { user_id: string; endpoint: string; p256dh: string; auth: string };
         Update: Partial<PushSubscriptionRow>;
+      };
+      couple_photos: {
+        Row: CouplePhoto;
+        Insert: Partial<CouplePhoto> & { couple_id: string; url: string };
+        Update: Partial<CouplePhoto>;
       };
     };
     Functions: {
