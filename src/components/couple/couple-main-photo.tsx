@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { Camera, Loader2, Trash2, ImagePlus } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { createClient } from '@/lib/supabase/client';
+import { compressImage } from '@/lib/image';
 
 // 메인 화면에 걸어두는 둘이 찍은 대표 사진 1장. (couples.main_photo_url)
 export function CoupleMainPhoto() {
@@ -20,12 +21,13 @@ export function CoupleMainPhoto() {
     setErr('');
     if (!file) return;
     if (!file.type.startsWith('image/')) { setErr('이미지 파일만 올릴 수 있어요.'); return; }
-    if (file.size > 10 * 1024 * 1024) { setErr('10MB 이하 이미지만 올릴 수 있어요.'); return; }
+    if (file.size > 20 * 1024 * 1024) { setErr('20MB 이하 이미지만 올릴 수 있어요.'); return; }
     setUploading(true);
     const supabase = createClient();
-    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+    const compressed = await compressImage(file);
+    const ext = (compressed.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
     const path = `${couple.id}/main/${crypto.randomUUID()}.${ext}`;
-    const { error } = await supabase.storage.from('chat-images').upload(path, file, { contentType: file.type });
+    const { error } = await supabase.storage.from('chat-images').upload(path, compressed, { contentType: compressed.type });
     if (error) { setErr('업로드에 실패했어요.'); setUploading(false); return; }
     const { data: pub } = supabase.storage.from('chat-images').getPublicUrl(path);
     await updateCouple({ main_photo_url: pub.publicUrl });
