@@ -64,20 +64,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   initialize: async () => {
     const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    // getSession(): 로컬에 저장된 세션(JWT)을 즉시 반환 → 네트워크 검증(getUser) 없이 첫 화면을 빠르게.
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
 
     if (user) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      set({
-        user: { id: user.id, email: user.email! },
-        profile,
-      });
-      await get().loadCouple(user.id);
+      set({ user: { id: user.id, email: user.email! } });
+      // 프로필과 커플 정보를 병렬로 로드 (순차 → 병렬, 왕복 횟수 단축).
+      await Promise.all([
+        supabase.from('profiles').select('*').eq('id', user.id).single()
+          .then(({ data: profile }) => set({ profile })),
+        get().loadCouple(user.id),
+      ]);
       set({ initialized: true });
     } else {
       set({ user: null, profile: null, couple: null, partner: null, initialized: true });

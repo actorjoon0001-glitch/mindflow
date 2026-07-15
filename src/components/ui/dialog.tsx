@@ -47,7 +47,9 @@ export function Dialog({ open, onClose, title, children, className }: DialogProp
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
       <div
         className={cn(
-          'relative z-10 w-full max-w-lg rounded-2xl border border-surface-300 bg-surface-50 p-6 shadow-2xl animate-slide-up',
+          // max-h + overflow-y-auto: 내용이 길어도(예: 사진 미리보기) 화면을 넘지 않고
+          // 다이얼로그 내부에서 스크롤되어 하단 저장 버튼까지 항상 닿을 수 있게. (dvh: 모바일 주소창 대응)
+          'relative z-10 w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain rounded-2xl border border-surface-300 bg-surface-50 p-6 shadow-2xl animate-slide-up',
           className
         )}
       >
