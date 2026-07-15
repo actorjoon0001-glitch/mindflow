@@ -50,9 +50,15 @@ export function CoupleMainPhoto() {
         onChange={(e) => onPick(e.target.files?.[0])}
       />
       {photo ? (
-        <div className="relative group rounded-2xl overflow-hidden border border-surface-300 shadow-lg">
+        <div className="relative group rounded-2xl overflow-hidden border border-surface-300 shadow-lg bg-surface-100">
+          {/* 흐릿한 배경(레터박스 채우기) */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={photo} alt="우리 사진" className="w-full max-h-80 object-cover" />
+          <img src={photo} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-40" />
+          {/* 원본 전체가 잘리지 않게 표시 */}
+          <div className="relative flex items-center justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={photo} alt="우리 사진" className="max-h-[72vh] w-auto max-w-full object-contain" />
+          </div>
           <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/60 to-transparent flex items-center justify-end gap-2">
             <button
               onClick={() => fileRef.current?.click()}
