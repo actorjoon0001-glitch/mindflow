@@ -41,6 +41,16 @@ function FitBounds({ places, focus }: { places: CouplePlace[]; focus: CouplePlac
   return null;
 }
 
+// 검색/핀 위치(pending)가 정해지면 그 위치로 지도 이동.
+function FlyToPending({ pending }: { pending: { lat: number; lng: number } | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (pending) map.setView([pending.lat, pending.lng], 16, { animate: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pending?.lat, pending?.lng]);
+  return null;
+}
+
 // 모바일에서 편하게: 지도 중앙에 조준점을 두고 "여기에 기록" 버튼으로 추가.
 function MapControls({ onAddCenter }: { onAddCenter: (lat: number, lng: number) => void }) {
   const map = useMap();
@@ -117,6 +127,7 @@ export default function CoupleMap({ places, focus, onPick, pending }: CoupleMapP
       />
       <ClickHandler onPick={onPick} />
       <FitBounds places={places} focus={focus} />
+      <FlyToPending pending={pending} />
       <MapControls onAddCenter={onPick} />
 
       {places.map((place) => {
