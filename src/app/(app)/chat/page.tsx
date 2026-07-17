@@ -344,7 +344,7 @@ const ChatComposer = memo(function ChatComposer({
 
   const submit = () => {
     const t = text.trim();
-    if (!t || sending) return;
+    if (!t) return; // 텍스트 전송은 낙관적이라 sending 대기 없이 바로 전송
     setText('');
     onSend(t);
   };
@@ -380,8 +380,8 @@ const ChatComposer = memo(function ChatComposer({
         className="flex-1 bg-surface-100 border border-surface-300 rounded-xl px-4 py-3 text-sm text-gray-200 placeholder:text-gray-600 resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 max-h-32"
         style={{ minHeight: '44px' }}
       />
-      <Button onClick={submit} disabled={!text.trim() || sending} size="icon" className="h-11 w-11 rounded-xl shrink-0">
-        {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+      <Button onClick={submit} disabled={!text.trim()} size="icon" className="h-11 w-11 rounded-xl shrink-0">
+        <Send size={18} />
       </Button>
     </div>
   );
