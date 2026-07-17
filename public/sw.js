@@ -32,7 +32,14 @@ self.addEventListener('push', (event) => {
     ],
   };
 
-  event.waitUntil(self.registration.showNotification(data.title, options));
+  // 앱이 열려(포커스) 있으면 서버 푸시 알림은 띄우지 않는다.
+  // → 인앱 알림(ChatNotifier)이 처리하므로 중복 방지 + 디스크릿(업무 위장) 모드가 깨지지 않음.
+  event.waitUntil((async () => {
+    const clientsArr = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const focused = clientsArr.some((c) => c.focused || c.visibilityState === 'visible');
+    if (focused) return;
+    await self.registration.showNotification(data.title, options);
+  })());
 });
 
 self.addEventListener('notificationclick', (event) => {
