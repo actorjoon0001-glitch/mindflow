@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { compressImage } from '@/lib/image';
 import { useAuthStore } from '@/stores/auth-store';
@@ -17,6 +17,10 @@ export function useCoupleChat() {
   const user = useAuthStore((s) => s.user);
   const couple = useAuthStore((s) => s.couple);
   const partner = useAuthStore((s) => s.partner);
+
+  // 최신 reactions를 ref로 유지 → react 핸들러를 안정된 identity로(메시지 행 memo 유지).
+  const reactionsRef = useRef(reactions);
+  reactionsRef.current = reactions;
 
   // 내가 지금 채팅을 봤다고 기록 → 상대 화면의 "1" 이 사라짐.
   const markRead = useCallback(async () => {
@@ -205,18 +209,18 @@ export function useCoupleChat() {
     return null;
   };
 
-  const deleteMessage = async (id: string) => {
+  const deleteMessage = useCallback(async (id: string) => {
     if (!user) return;
     setMessages((prev) => prev.filter((m) => m.id !== id));
     const supabase = createClient();
     await supabase.from('couple_messages').delete().eq('id', id).eq('sender_id', user.id);
-  };
+  }, [user]);
 
   // 반응 토글: 같은 이모지면 제거, 다르면 교체(사용자당 메시지당 1개).
-  const react = async (messageId: string, emoji: string) => {
+  const react = useCallback(async (messageId: string, emoji: string) => {
     if (!couple || !user) return;
     const supabase = createClient();
-    const mine = (reactions[messageId] || []).find((r) => r.user_id === user.id);
+    const mine = (reactionsRef.current[messageId] || []).find((r) => r.user_id === user.id);
 
     // 낙관적 업데이트
     setReactions((prev) => {
@@ -232,7 +236,7 @@ export function useCoupleChat() {
       await supabase.from('couple_message_reactions')
         .upsert({ message_id: messageId, user_id: user.id, couple_id: couple.id, emoji });
     }
-  };
+  }, [couple, user]);
 
   return {
     messages, loading, sending, partnerReadAt, reactions, myId: user?.id,
