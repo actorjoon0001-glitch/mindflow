@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { Send, Heart, Loader2, ImageIcon, Trash2, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
@@ -45,14 +45,13 @@ export default function ChatPage() {
   const partner = useAuthStore((s) => s.partner);
   const profile = useAuthStore((s) => s.profile);
   const discreet = useSkin((s) => s.discreet);
-  const [input, setInput] = useState('');
   const [imgError, setImgError] = useState('');
   const [dragOver, setDragOver] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQ, setSearchQ] = useState('');
+  const [visibleCount, setVisibleCount] = useState(150); // 최근 N개만 DOM에 렌더 → 스크롤 렉 완화
   const endRef = useRef<HTMLDivElement>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialScrolled = useRef(false);
 
@@ -81,24 +80,15 @@ export default function ChatPage() {
     return () => { clearTimeout(t); document.removeEventListener('click', close); };
   }, [activeId]);
 
-  const handleSend = async () => {
-    if (!input.trim() || sending) return;
-    const msg = input;
-    setInput('');
-    await sendMessage(msg);
-  };
+  const handleSend = useCallback((msg: string) => {
+    sendMessage(msg);
+  }, [sendMessage]);
 
   const uploadImage = useCallback(async (file: File) => {
     setImgError('');
     const err = await sendImage(file);
     if (err) setImgError(err);
   }, [sendImage]);
-
-  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = ''; // 같은 파일 재선택 허용
-    if (file) await uploadImage(file);
-  };
 
   // 붙여넣기(Ctrl+V)로 캡처 이미지 바로 전송 — 화면 어디서든 동작.
   useEffect(() => {
@@ -130,7 +120,10 @@ export default function ChatPage() {
 
   let lastDay = '';
   const q = searchQ.trim().toLowerCase();
-  const shownMessages = q ? messages.filter((m) => m.content && m.content.toLowerCase().includes(q)) : messages;
+  const filtered = q ? messages.filter((m) => m.content && m.content.toLowerCase().includes(q)) : messages;
+  // 검색 중이 아니면 최근 visibleCount개만 렌더 (오래된 대화는 "더 보기"로).
+  const shownMessages = q ? filtered : filtered.slice(Math.max(0, filtered.length - visibleCount));
+  const hasMore = !q && filtered.length > shownMessages.length;
 
   return (
     <div
@@ -177,6 +170,16 @@ export default function ChatPage() {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto space-y-1 pb-4">
+        {hasMore && (
+          <div className="flex justify-center py-2">
+            <button
+              onClick={() => setVisibleCount((v) => v + 150)}
+              className="text-xs text-gray-400 bg-surface-100 hover:bg-surface-200 px-3 py-1.5 rounded-full transition-colors"
+            >
+              이전 대화 더 보기
+            </button>
+          </div>
+        )}
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="animate-spin text-gray-600" size={24} />
@@ -322,35 +325,64 @@ export default function ChatPage() {
       {/* Input */}
       <div className="border-t border-surface-300 pt-4">
         {imgError && <p className="text-xs text-red-400 mb-2 px-1">{imgError}</p>}
-        <div className="flex gap-2 items-end">
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
-          <EmojiPicker onPick={(emoji) => setInput((prev) => prev + emoji)} />
-          <Button
-            onClick={() => fileRef.current?.click()}
-            disabled={sending}
-            variant="secondary"
-            size="icon"
-            className="h-11 w-11 rounded-xl shrink-0"
-            title="사진 첨부"
-          >
-            <ImageIcon size={18} />
-          </Button>
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
-            }}
-            placeholder="메시지 보내기 (사진은 Ctrl+V 붙여넣기)"
-            rows={1}
-            className="flex-1 bg-surface-100 border border-surface-300 rounded-xl px-4 py-3 text-sm text-gray-200 placeholder:text-gray-600 resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 max-h-32"
-            style={{ minHeight: '44px' }}
-          />
-          <Button onClick={handleSend} disabled={!input.trim() || sending} size="icon" className="h-11 w-11 rounded-xl shrink-0">
-            {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-          </Button>
-        </div>
+        <ChatComposer sending={sending} onSend={handleSend} onImage={uploadImage} />
       </div>
     </div>
   );
 }
+
+// 입력창을 별도 컴포넌트 + 로컬 상태로 분리 → 타이핑할 때 메시지 목록이 리렌더되지 않아 렉 방지.
+const ChatComposer = memo(function ChatComposer({
+  sending, onSend, onImage,
+}: {
+  sending: boolean;
+  onSend: (text: string) => void;
+  onImage: (file: File) => void;
+}) {
+  const [text, setText] = useState('');
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const submit = () => {
+    const t = text.trim();
+    if (!t || sending) return;
+    setText('');
+    onSend(t);
+  };
+
+  return (
+    <div className="flex gap-2 items-end">
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) onImage(f); }}
+      />
+      <EmojiPicker onPick={(emoji) => setText((prev) => prev + emoji)} />
+      <Button
+        onClick={() => fileRef.current?.click()}
+        disabled={sending}
+        variant="secondary"
+        size="icon"
+        className="h-11 w-11 rounded-xl shrink-0"
+        title="사진 첨부"
+      >
+        <ImageIcon size={18} />
+      </Button>
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); }
+        }}
+        placeholder="메시지 보내기 (사진은 Ctrl+V 붙여넣기)"
+        rows={1}
+        className="flex-1 bg-surface-100 border border-surface-300 rounded-xl px-4 py-3 text-sm text-gray-200 placeholder:text-gray-600 resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 max-h-32"
+        style={{ minHeight: '44px' }}
+      />
+      <Button onClick={submit} disabled={!text.trim() || sending} size="icon" className="h-11 w-11 rounded-xl shrink-0">
+        {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+      </Button>
+    </div>
+  );
+});
