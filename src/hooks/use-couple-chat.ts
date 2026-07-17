@@ -137,18 +137,37 @@ export function useCoupleChat() {
 
   const sendMessage = async (content: string) => {
     if (!couple || !user || !content.trim()) return;
-    setSending(true);
+    const text = content.trim();
+    // 낙관적 전송: 누르는 즉시 화면에 표시하고, 저장은 뒤에서 처리 → 전송 체감 속도 대폭 개선.
+    const tempId = `temp-${crypto.randomUUID()}`;
+    const optimistic: CoupleMessage = {
+      id: tempId,
+      couple_id: couple.id,
+      sender_id: user.id,
+      content: text,
+      image_url: null,
+      created_at: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, optimistic]);
+
     const supabase = createClient();
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('couple_messages')
-      .insert({ couple_id: couple.id, sender_id: user.id, content: content.trim() })
+      .insert({ couple_id: couple.id, sender_id: user.id, content: text })
       .select()
       .single();
+
     if (data) {
-      setMessages((prev) => (prev.some((m) => m.id === data.id) ? prev : [...prev, data]));
+      // 임시 메시지를 실제 저장본으로 교체(실시간으로 이미 들어온 중복도 제거).
+      setMessages((prev) => {
+        const cleaned = prev.filter((m) => m.id !== tempId && m.id !== data.id);
+        return [...cleaned, data];
+      });
       fetch('/api/push/notify', { method: 'POST' }).catch(() => { /* ignore */ });
+    } else if (error) {
+      // 실패 시 임시 메시지 제거
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
     }
-    setSending(false);
   };
 
   const sendImage = async (file: File): Promise<string | null> => {
